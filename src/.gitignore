@@ -1,3 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# 忽略私有且可能有版權疑慮的圖片資源
+assets/private_images/*
+!assets/private_images/.placeholder

@@ -10,10 +10,14 @@ var is_moving: bool = false
 @onready var board_node: Node2D = $Board
 @onready var info_label: Label = $UI/InfoLabel
 
-# 載入預設圖片 (用作格子的背景)
-var cell_texture: Texture2D = preload("res://icon.svg")
+# 載入預設圖片 (現在改用 ResourceManager 的 Fallback 機制)
+# 假設我們預期會有一張名為 "cell_bg.png" 的圖片
+var cell_texture: Texture2D
 
 func _ready() -> void:
+	# 在 _ready 階段動態載入圖片
+	cell_texture = ResourceManager.load_image_with_fallback("cell_bg.png")
+	
 	_generate_board_positions()
 	_draw_board_cells()
 	
