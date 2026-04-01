@@ -1,22 +1,22 @@
-[gd_scene load_steps=3 format=3 uid="uid://b8v8j3n4m8v2p"]
+[gd_scene format=3 uid="uid://b8v8j3n4m8v2p"]
 
-[ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
-[ext_resource type="Texture2D" uid="uid://c6v2n7m5p9j1k" path="res://assets/icon.svg" id="2_icon"]
+[ext_resource type="Script" uid="uid://dbtaf1tjhdesr" path="res://scripts/Main.gd" id="1_main"]
+[ext_resource type="Texture2D" uid="uid://27ogndy7knxs" path="res://assets/icon.svg" id="2_icon"]
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" unique_id=995981613]
 script = ExtResource("1_main")
 
-[node name="Board" type="Node2D" parent="."]
+[node name="Board" type="Node2D" parent="." unique_id=2080499475]
 
-[node name="Player" type="Sprite2D" parent="."]
+[node name="Player" type="Sprite2D" parent="." unique_id=827680282]
 texture = ExtResource("2_icon")
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=536246566]
 position = Vector2(576, 324)
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=1549242096]
 
-[node name="InfoLabel" type="Label" parent="UI"]
+[node name="InfoLabel" type="Label" parent="UI" unique_id=1263469882]
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 300.0

@@ -16,15 +16,21 @@ var cell_texture: Texture2D
 
 func _ready() -> void:
 	# 在 _ready 階段動態載入圖片
-	cell_texture = ResourceManager.load_image_with_fallback("cell_bg.png")
-	
+	cell_texture = ResourceManager.load_image_with_fallback("cell_bg.png") # 地板改用 Mew 當範例
+	player.texture = ResourceManager.load_image_with_fallback("Cyndaquil.png") # 玩家用 Cyndaquil
+
 	_generate_board_positions()
 	_draw_board_cells()
-	
+
 	# 遊戲開始，將玩家放到第 0 格
 	if map_positions.size() > 0:
 		player.position = map_positions[0]
 
+		# --- 自動縮放玩家圖示 ---
+		var p_tex_size: Vector2 = player.texture.get_size()
+		var p_target_size: float = 60.0
+		player.scale = Vector2(p_target_size / p_tex_size.x, p_target_size / p_tex_size.y)
+		# --------------------------
 func _process(delta: float) -> void:
 	# 監聽鍵盤輸入：按下空白鍵且沒有在移動中
 	if Input.is_action_just_pressed("ui_accept") and not is_moving:
@@ -55,8 +61,15 @@ func _draw_board_cells() -> void:
 		cell.texture = cell_texture
 		cell.position = map_positions[i]
 		
-		# 為了區分玩家和格子，把格子縮小並調暗
-		cell.scale = Vector2(0.6, 0.6) 
+		# --- 自動縮放格子圖示 ---
+		# 取得這張圖片原始的寬度與高度
+		var tex_size: Vector2 = cell.texture.get_size()
+		# 我們希望每格最後在畫面上的大小是 80x80
+		var target_visual_size: float = 80.0
+		# 計算 X 和 Y 需要縮放的比例
+		cell.scale = Vector2(target_visual_size / tex_size.x, target_visual_size / tex_size.y)
+		# --------------------------
+		
 		cell.modulate = Color(0.3, 0.3, 0.3, 1.0) # 灰色
 		
 		# 把這格加到場景上
