@@ -1,14 +1,17 @@
 [gd_scene format=3 uid="uid://b8v8j3n4m8v2p"]
 
 [ext_resource type="Script" uid="uid://dbtaf1tjhdesr" path="res://scripts/Main.gd" id="1_main"]
+[ext_resource type="Resource" uid="uid://br2ka27k3vjjd" path="res://data/map_default.tres" id="2_0bbpv"]
 [ext_resource type="Texture2D" uid="uid://27ogndy7knxs" path="res://assets/icon.svg" id="2_icon"]
 
 [node name="Main" type="Node2D" unique_id=995981613]
 script = ExtResource("1_main")
+current_board = ExtResource("2_0bbpv")
 
 [node name="Board" type="Node2D" parent="." unique_id=2080499475]
 
 [node name="Player" type="Sprite2D" parent="." unique_id=827680282]
+position = Vector2(0, -58)
 texture = ExtResource("2_icon")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=536246566]

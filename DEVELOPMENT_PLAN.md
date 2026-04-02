@@ -13,31 +13,52 @@
 
 ---
 
-## 🤖 給 AI 協作夥伴的指示 (Instructions for AI Agents)
-當使用者要求「執行 Phase X」或「實作某功能」時，請遵循以下原則：
-1.  **語言**: 提供 GDScript 範例程式碼，並加上明確的型別提示 (Static Typing，如 `var money: int = 0`)，以符合 C++ 開發者的習慣。
-2.  **架構**: 採用 MVC 思維，邏輯 (Data/State) 與 UI (Control Nodes) 盡量解耦。利用 Godot 的 `Signal` (觀察者模式) 進行跨節點溝通。
-3.  **網路請求**: 使用 Godot 內建的 `HTTPRequest` 節點處理非同步 API 呼叫，並使用 `JSON.parse_string()` 解析資料。
-4.  **動畫**: 移動皆使用 Godot `Tween` 節點實作，避免手刻 `_process` 裡的座標運算。
-5.  **更新進度**: 完成任務後，請協助使用者更新本文件下方的 [進度追蹤表](#進度追蹤表-progress-tracker)。
+## 🏛️ 架構決策紀錄 (Architecture Decision Records - ADR)
+本區塊記錄了專案開發過程中的重大架構轉折與設計理念，供開發團隊回顧。
+
+### 1. 地圖資料儲存 (Board Data)
+*   **決策**: 採用 Godot Custom Resources (`.tres`) 取代 JSON。
+*   **原因**: 
+    *   Godot 底層對 Resource 序列化效能極佳，且支援強型別檢查。
+    *   內建 Inspector 支援，零成本獲得地圖編輯器 GUI，無需額外開發工具。
+*   **Fallback 機制**: 
+    1. 優先讀取外部指定的關卡 `.tres`。
+    2. 若未指定，讀取專案內建的 `map_default.tres` (8字形地圖)。
+    3. 若實體檔案遺失，則拋出 Fatal Error 中止執行，確保「邏輯」與「資料」的絕對解耦 (Data-Driven)。
+
+### 2. 移動狀態機重構 (Step-by-step Movement)
+*   **決策**: 地圖本質為有向圖 (Directed Graph)。廢除「擲骰子後瞬間計算終點」的做法，改以「剩餘步數」逐步移動。
+*   **原因**: 為了支援複雜的大富翁機制 (如路障、岔路選擇)，必須在移動的「過程」中安插觸發點。
+*   **狀態機流轉順序**: 
+    1. 經過節點 (檢查路障/岔路) 
+    2. 檢查剩餘步數 
+    3. 若歸零則觸發落地事件。
+*   **禁止回走 (No Backtracking)**：在有向圖的岔路判定時，必須過濾掉玩家的來源節點 (Previous Node)。
 
 ---
 
 ## 🛠️ 階段開發藍圖 (Step-by-Step Roadmap)
 
-### Phase 1: 基礎建設與平移動畫 (Foundation & Movement)
-*   [ ] **1.1 建立 Godot 專案**: 在 Windows 下開啟 Godot 4，建立專案於 WSL 資料夾 (`/home/j8ohnny/workspace/DHRich4`)。
-*   [ ] **1.2 建立地圖資料結構 (Model)**: 寫一個 GDScript (`MapManager.gd`)，定義環狀棋盤的每一格座標 (例如 Array of Vector2)。
-*   [ ] **1.3 建立玩家節點 (View)**: 建立 `Sprite2D` 代表玩家，載入預設圖示 (`icon.svg`)。
-*   [ ] **1.4 實作骰子與平移 (Controller)**:
-    *   按空白鍵產生 1~6 亂數。
-    *   計算目標格子座標。
-    *   使用 `create_tween().tween_property(player, "position", target_pos, 0.5)` 實作平移。
+### Phase 1: 基礎建設與平移動畫 (Foundation & Movement) [✅ 完成]
+*   [x] **1.1 建立 Godot 專案**: 在 Windows 下開啟 Godot 4，建立專案於 WSL 資料夾 (`/home/j8ohnny/workspace/DHRich4`)。
+*   [x] **1.2 建立地圖資料結構 (Model)**: 寫一個 GDScript (`MapManager.gd`)，定義環狀棋盤的每一格座標 (例如 Array of Vector2)。
+*   [x] **1.3 建立玩家節點 (View)**: 建立 `Sprite2D` 代表玩家，載入預設圖示 (`icon.svg`)。
+*   [x] **1.4 實作骰子與平移 (Controller)**: 使用 Tween 實作平移。
+*   [x] **1.5 資源覆寫防護 (ResourceManager)**: 建立 private/public 雙資料夾與 Fallback 動態載入機制。
+*   [x] **1.6 獨立除錯系統 (DebugLogger)**: 建立不綁死於遊戲畫面的 OS Window 與實體 Log 寫入機制。
 
-### Phase 2: 核心遊戲迴圈 (Core Game Loop & State Machine)
-*   [ ] **2.1 建立狀態機**: 定義遊戲狀態 (如 `WAITING_ROLL`, `MOVING`, `EVENT_HANDLING`, `END_TURN`)。
-*   [ ] **2.2 定義格子事件**: 定義不同格子類型 (空地、商店、機會命運)。
-*   [ ] **2.3 玩家資產系統**: 建立 `PlayerStats.gd` 記錄金錢、房地產。實作經過起點加錢、買地扣錢邏輯 (先以文字 `print` 輸出結果)。
+### Phase 2: 核心遊戲迴圈與地圖重構 (Core Loop & Map Refactoring) [🚧 進行中]
+*   [x] **2.1 建立基礎狀態機**: 定義遊戲狀態 (WAITING_ROLL, MOVING, EVENT_HANDLING) 並實作防連點。
+*   [x] **2.2 抽離地圖為自訂資源 (Godot Resource)**: 
+    *   將 `CellData` (單格屬性) 與 `BoardData` (地圖陣列) 抽離為獨立的 `.tres` 檔案。
+    *   導入 `next_nodes: Array[int]` 實作有向圖 (Directed Graph) 以支援未來的岔路系統。
+    *   實作外部指定關卡與內建 `map_default.tres` (8字形) 的 Fallback 載入機制。
+*   [ ] **2.3 重構移動機制 (Step-by-Step Movement)**:
+    *   廢除「直線飛往終點」的做法，改為以「剩餘步數」為核心的逐格移動。
+    *   每走一步觸發「路過事件 (Passing Event)」(如路障、岔路選擇)。
+    *   步數歸零時才觸發「落地事件 (Landing Event)」。
+    *   實作禁止回走 (No Backtracking) 的有向圖走訪邏輯。
+*   [ ] **2.4 實作基礎格子邏輯**: 空地購買、扣過路費等，配合 `PlayerStats` 資產扣除。
 
 ### Phase 3: GUI 與市場物價系統 (GUI & Dynamic Market)
 *   [ ] **3.1 遊戲主介面**: 使用 `CanvasLayer` 與 `Control` 節點 (Panel, Label) 顯示玩家當前金錢、骰子點數、回合數。

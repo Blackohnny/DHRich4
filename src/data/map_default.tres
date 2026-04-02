@@ -1,0 +1,190 @@
+[gd_resource type="Resource" script_class="BoardData" format=3 uid="uid://br2ka27k3vjjd"]
+
+[ext_resource type="Script" uid="uid://bnidyrjfy1tcv" path="res://scripts/CellData.gd" id="1_tpgd8"]
+[ext_resource type="Script" uid="uid://c72xd17kxdhy4" path="res://scripts/BoardData.gd" id="2_q8nuo"]
+
+[sub_resource type="Resource" id="Resource_tpgd8"]
+script = ExtResource("1_tpgd8")
+type = 0
+name = "起點"
+position = Vector2(456, 84)
+price = 1800
+next_nodes = Array[int]([1])
+
+[sub_resource type="Resource" id="Resource_q8nuo"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #1"
+position = Vector2(536, 84)
+price = 2600
+next_nodes = Array[int]([2])
+
+[sub_resource type="Resource" id="Resource_onvxu"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #2"
+position = Vector2(616, 84)
+price = 1100
+next_nodes = Array[int]([3])
+
+[sub_resource type="Resource" id="Resource_uruef"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #3"
+position = Vector2(696, 84)
+price = 1800
+next_nodes = Array[int]([4])
+
+[sub_resource type="Resource" id="Resource_ey2nj"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #4"
+position = Vector2(696, 164)
+price = 1500
+next_nodes = Array[int]([5])
+
+[sub_resource type="Resource" id="Resource_b2wno"]
+script = ExtResource("1_tpgd8")
+type = 2
+name = "命運交叉口"
+position = Vector2(696, 244)
+price = 1600
+next_nodes = Array[int]([18, 6])
+
+[sub_resource type="Resource" id="Resource_uc4ht"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #6"
+position = Vector2(696, 324)
+price = 1600
+next_nodes = Array[int]([7])
+
+[sub_resource type="Resource" id="Resource_kqqdt"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #7"
+position = Vector2(616, 324)
+price = 1500
+next_nodes = Array[int]([8])
+
+[sub_resource type="Resource" id="Resource_0wrra"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #8"
+position = Vector2(536, 324)
+price = 2600
+next_nodes = Array[int]([9])
+
+[sub_resource type="Resource" id="Resource_vpa8q"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #9"
+position = Vector2(456, 324)
+price = 2300
+next_nodes = Array[int]([10])
+
+[sub_resource type="Resource" id="Resource_wdw6g"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #10"
+position = Vector2(456, 244)
+price = 1300
+next_nodes = Array[int]([11])
+
+[sub_resource type="Resource" id="Resource_aan7i"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #11"
+position = Vector2(456, 164)
+price = 2600
+next_nodes = Array[int]([0])
+
+[sub_resource type="Resource" id="Resource_gstrh"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #12"
+position = Vector2(456, 404)
+price = 1300
+next_nodes = Array[int]([13])
+
+[sub_resource type="Resource" id="Resource_tm71y"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #13"
+position = Vector2(456, 484)
+price = 1300
+next_nodes = Array[int]([14])
+
+[sub_resource type="Resource" id="Resource_6klw2"]
+script = ExtResource("1_tpgd8")
+type = 2
+name = "命運交叉口"
+position = Vector2(456, 564)
+price = 3000
+next_nodes = Array[int]([12])
+
+[sub_resource type="Resource" id="Resource_ukt8u"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #15"
+position = Vector2(456, 564)
+price = 3000
+next_nodes = Array[int]([14])
+
+[sub_resource type="Resource" id="Resource_fo63c"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #16"
+position = Vector2(536, 564)
+price = 1600
+next_nodes = Array[int]([15])
+
+[sub_resource type="Resource" id="Resource_4ya48"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #17"
+position = Vector2(616, 564)
+price = 1500
+next_nodes = Array[int]([16])
+
+[sub_resource type="Resource" id="Resource_1mj75"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #18"
+position = Vector2(696, 564)
+price = 1500
+next_nodes = Array[int]([19])
+
+[sub_resource type="Resource" id="Resource_d8ar3"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #19"
+position = Vector2(696, 484)
+price = 1900
+next_nodes = Array[int]([20])
+
+[sub_resource type="Resource" id="Resource_w24tw"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #20"
+position = Vector2(696, 404)
+price = 1200
+next_nodes = Array[int]([17])
+
+[sub_resource type="Resource" id="Resource_6ciqt"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #21"
+position = Vector2(616, 324)
+price = 1800
+
+[sub_resource type="Resource" id="Resource_saafr"]
+script = ExtResource("1_tpgd8")
+type = 1
+name = "土地 #22"
+position = Vector2(536, 324)
+price = 2500
+
+[resource]
+script = ExtResource("2_q8nuo")
+cells = Array[ExtResource("1_tpgd8")]([SubResource("Resource_tpgd8"), SubResource("Resource_q8nuo"), SubResource("Resource_onvxu"), SubResource("Resource_uruef"), SubResource("Resource_ey2nj"), SubResource("Resource_b2wno"), SubResource("Resource_uc4ht"), SubResource("Resource_kqqdt"), SubResource("Resource_0wrra"), SubResource("Resource_vpa8q"), SubResource("Resource_wdw6g"), SubResource("Resource_aan7i"), SubResource("Resource_gstrh"), SubResource("Resource_tm71y"), SubResource("Resource_6klw2"), SubResource("Resource_ukt8u"), SubResource("Resource_fo63c"), SubResource("Resource_4ya48"), SubResource("Resource_1mj75"), SubResource("Resource_d8ar3"), SubResource("Resource_w24tw"), SubResource("Resource_6ciqt"), SubResource("Resource_saafr")])

@@ -17,7 +17,9 @@
 *   **遊戲引擎**: [Godot Engine 4.6.1](https://godotengine.org/) (Standard version, GDScript)
 *   **開發語言**: GDScript (具備強型別宣告)
 *   **架構設計**: MVC (Model-View-Controller) 與 State Machine (狀態機)
-*   **資源管理**: 實作動態載入與 Fallback 機制，隔離私有資源與開源資源。
+*   **資源管理 (Data-Driven)**: 
+    *   實作動態載入與 Fallback 機制，隔離私有資源與開源資源。
+    *   **地圖系統完全資料驅動**：捨棄硬編碼，使用 Godot Custom Resources (`.tres`) 建立有向圖 (Directed Graph) 地圖結構，支援 8 字形與岔路走訪。
 
 ## 🚀 如何在本地端執行此專案
 

@@ -16,7 +16,9 @@ This is an AI-driven, single-player Monopoly-style game side project that integr
 *   **Game Engine**: [Godot Engine 4.6.1](https://godotengine.org/) (Standard version, GDScript)
 *   **Language**: GDScript (with strict static typing conventions)
 *   **Architecture**: MVC (Model-View-Controller) and robust State Machine implementations.
-*   **Resource Management**: Custom dynamic loading and Fallback mechanisms to strictly isolate private (copyrighted) assets from open-source assets.
+*   **Resource Management (Data-Driven)**: 
+    *   Custom dynamic loading and Fallback mechanisms strictly isolate private (copyrighted) assets from open-source assets.
+    *   **Data-Driven Board System**: Hardcoded generation is abandoned in favor of Godot Custom Resources (`.tres`). Maps are implemented as Directed Graphs to support figure-8 layouts and branching paths.
 
 ## 🚀 How to Run Locally
 
