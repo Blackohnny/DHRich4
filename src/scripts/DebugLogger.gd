@@ -9,15 +9,22 @@ var debug_window: Window
 var text_box: RichTextLabel
 var is_enabled: bool = true # 預設開啟
 
+# 綁定遊戲主畫面的狀態提示標籤
+var status_label_ref: Label
+
 # 實體 Log 檔案變數
 var log_file: FileAccess
 const LOG_FILE_PATH: String = "res://dhrich4_debug.log"
 
 func _ready() -> void:
 	_init_log_file()
-	
+
 	if is_enabled:
 		_create_debug_window()
+
+# 讓外部腳本 (如 Main.gd) 將自己的 UI Label 註冊給 Logger
+func register_status_label(label: Label) -> void:
+	status_label_ref = label
 
 # 初始化實體 Log 檔案
 func _init_log_file() -> void:
@@ -73,7 +80,8 @@ func _create_debug_window() -> void:
 	log_msg("Debug Console Initialized. Log file saved at: " + ProjectSettings.globalize_path(LOG_FILE_PATH))
 
 # 全域呼叫的印 Log 函式
-func log_msg(msg: String) -> void:
+# update_ui: 如果為 true，這段文字會同時顯示在遊戲主畫面的提示框中
+func log_msg(msg: String, update_ui: bool = false) -> void:
 	# 加上時間戳記
 	var time_dict = Time.get_datetime_dict_from_system()
 	var time_str = "%02d:%02d:%02d" % [time_dict.hour, time_dict.minute, time_dict.second]
@@ -90,6 +98,11 @@ func log_msg(msg: String) -> void:
 	if log_file != null and log_file.is_open():
 		log_file.store_string(formatted_msg + "\n")
 		log_file.flush() # 強制寫入硬碟，避免遊戲崩潰時遺失 Log
+		
+	# 4. 如果有要求，且綁定了 UI Label，就更新主畫面
+	if update_ui and status_label_ref != null:
+		# 主畫面不需要時間戳記，只要顯示精簡訊息
+		status_label_ref.text = msg
 
 # 在遊戲關閉時確保檔案正確關閉
 func _exit_tree() -> void:

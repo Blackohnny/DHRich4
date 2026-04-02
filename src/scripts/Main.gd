@@ -53,10 +53,12 @@ func _ready() -> void:
 
 	_generate_board_data() # 改名並升級為產生完整資料
 	_draw_board_cells()
-	
+
+	# 將主畫面的 UI 文字框註冊給 DebugLogger 統一管理
+	DebugLogger.register_status_label(info_label)
+
 	# 綁定實體按鈕
 	debug_toggle_btn.pressed.connect(func(): DebugLogger.toggle_window(not DebugLogger.is_enabled))
-
 	# 遊戲開始，將玩家放到第 0 格
 	if map_cells.size() > 0:
 		player.position = map_cells[0].position
@@ -68,7 +70,7 @@ func _ready() -> void:
 		# --------------------------
 		
 	# 初始化狀態提示
-	_update_ui_state("遊戲開始！按空白鍵 (Space) 擲骰子。")
+	DebugLogger.log_msg("遊戲開始！按空白鍵 (Space) 擲骰子。", true)
 
 func _process(delta: float) -> void:
 	# 按下 ESC 鍵來開關 Debug 視窗 (Godot 預設 ui_cancel 就是 ESC)
@@ -156,8 +158,7 @@ func _roll_dice_and_move() -> void:
 	# Godot 內建亂數，randi_range 產生指定範圍的整數
 	var dice_roll: int = randi_range(1, 4) # 先用 1~4，避免一次走完一整圈
 
-	_update_ui_state("骰出: %d 點，移動中..." % dice_roll)
-	DebugLogger.log_msg("🎲 玩家骰出了 %d 點" % dice_roll)
+	DebugLogger.log_msg("🎲 玩家骰出了 %d 點，移動中..." % dice_roll, true)
 
 	var target_index: int = (current_pos_index + dice_roll) % map_cells.size()
 	_move_player_to(target_index)
@@ -181,13 +182,11 @@ func _on_tween_finished(target_index: int) -> void:
 func _handle_cell_event(cell_index: int) -> void:
 	var current_cell: CellData = map_cells[cell_index]
 	
-	_update_ui_state("停在: %s" % current_cell.name)
-	
-	# 將詳細資訊印到 DebugLogger
-	var log_str = "📍 玩家停在第 %d 格 [%s]" % [cell_index, current_cell.name]
+	# 將詳細資訊印到 DebugLogger，並同步更新到主畫面的 UI (第二個參數傳 true)
+	var log_str = "📍 停在第 %d 格 [%s]" % [cell_index, current_cell.name]
 	if current_cell.type == CellType.LAND:
 		log_str += " (售價: $%d, 擁有者: %d)" % [current_cell.price, current_cell.owner_id]
-	DebugLogger.log_msg(log_str)
+	DebugLogger.log_msg(log_str, true)
 	
 	# 為了測試狀態機循環，我們先用定時器假裝處理了 1 秒鐘的事件，然後回到可擲骰子狀態
 	await get_tree().create_timer(1.0).timeout 
@@ -197,9 +196,4 @@ func _handle_cell_event(cell_index: int) -> void:
 # 6. 回合結束，準備下一回合
 func _end_turn() -> void:
 	current_state = GameState.WAITING_ROLL
-	_update_ui_state("回合結束。請按空白鍵 (Space) 擲骰子。")
-
-# 統一管理 UI 更新
-func _update_ui_state(msg: String) -> void:
-	info_label.text = msg
-	DebugLogger.log_msg(msg)
+	DebugLogger.log_msg("回合結束。請按空白鍵 (Space) 擲骰子。", true)
