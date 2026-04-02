@@ -24,10 +24,9 @@ offset_bottom = 60.0
 theme_override_font_sizes/font_size = 24
 text = "按空白鍵 (Space) 擲骰子移動"
 
-[node name="DebugToggleButton" type="Button" parent="UI"]
+[node name="DebugToggleButton" type="Button" parent="UI" unique_id=128380878]
 offset_left = 980.0
 offset_top = 20.0
 offset_right = 1130.0
 offset_bottom = 60.0
 text = "Toggle Debug (ESC)"
-
