@@ -1,0 +1,105 @@
+extends Node
+
+# ---------------------------------------------------------
+# DebugLogger: 全域的除錯視窗管理器 (AutoLoad)
+# 負責建立、顯示、隱藏獨立的 OS 子視窗，並將 Log 印在裡面與實體檔案
+# ---------------------------------------------------------
+
+var debug_window: Window
+var text_box: RichTextLabel
+var is_enabled: bool = true # 預設開啟
+
+# 實體 Log 檔案變數
+var log_file: FileAccess
+const LOG_FILE_PATH: String = "res://dhrich4_debug.log"
+
+func _ready() -> void:
+	_init_log_file()
+	
+	if is_enabled:
+		_create_debug_window()
+
+# 初始化實體 Log 檔案
+func _init_log_file() -> void:
+	# 開啟檔案準備寫入 (Write 模式會清空舊的，如果想保留歷史紀錄可以改用 READ_WRITE 或 APPEND)
+	log_file = FileAccess.open(LOG_FILE_PATH, FileAccess.WRITE)
+	if log_file == null:
+		print("無法建立 Log 檔案: ", LOG_FILE_PATH)
+	else:
+		var time_dict = Time.get_datetime_dict_from_system()
+		log_file.store_string("=== DHRich4 Debug Log Session Started at %04d-%02d-%02d %02d:%02d:%02d ===\n" % [
+			time_dict.year, time_dict.month, time_dict.day, 
+			time_dict.hour, time_dict.minute, time_dict.second
+		])
+		log_file.flush()
+
+# 建立獨立的 OS 子視窗
+func _create_debug_window() -> void:
+	if debug_window != null:
+		return # 已經建過了
+		
+	# 1. 建立 Window 節點 (真正的作業系統視窗)
+	debug_window = Window.new()
+	debug_window.title = "DHRich4 - AI Debug Console"
+	debug_window.size = Vector2i(500, 400)
+	debug_window.position = Vector2i(100, 100) 
+	
+	# 【重要修正】：強制這是一個獨立的 OS 視窗，而不是被主視窗包住 (Embedded)
+	debug_window.wrap_controls = true
+	debug_window.transient = false # 確保它不會被強制置頂或黏在主視窗上
+	
+	# 設定視窗關閉行為：點擊 X 時只是隱藏，不要銷毀
+	debug_window.close_requested.connect(func(): toggle_window(false))
+	
+	# 2. 建立文字顯示區 (RichTextLabel 支援捲動和多色文字)
+	text_box = RichTextLabel.new()
+	text_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	text_box.scroll_following = true # 自動捲動到最底下
+	text_box.add_theme_font_size_override("normal_font_size", 14)
+	text_box.bbcode_enabled = true # 啟用 BBCode 來支援多色文字
+	
+	# 給文字框一個深色背景，字體為綠色
+	var bg = ColorRect.new()
+	bg.color = Color(0.1, 0.1, 0.1, 1.0)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	
+	# 3. 組裝節點樹
+	debug_window.add_child(bg)
+	debug_window.add_child(text_box)
+	
+	# 4. 將視窗加入到目前的 Scene Tree 中
+	call_deferred("add_child", debug_window)
+	
+	log_msg("Debug Console Initialized. Log file saved at: " + ProjectSettings.globalize_path(LOG_FILE_PATH))
+
+# 全域呼叫的印 Log 函式
+func log_msg(msg: String) -> void:
+	# 加上時間戳記
+	var time_dict = Time.get_datetime_dict_from_system()
+	var time_str = "%02d:%02d:%02d" % [time_dict.hour, time_dict.minute, time_dict.second]
+	var formatted_msg = "[%s] %s" % [time_str, msg]
+	
+	# 1. 永遠印在底層編輯器的 Output (最保險)
+	print("[Debug] " + formatted_msg)
+	
+	# 2. 如果視窗存在且開啟，印在獨立視窗上 (使用 bbcode 上色)
+	if is_enabled and text_box != null:
+		text_box.append_text("[color=gray][%s][/color] %s\n" % [time_str, msg])
+		
+	# 3. 同步寫入實體 Log 檔案
+	if log_file != null and log_file.is_open():
+		log_file.store_string(formatted_msg + "\n")
+		log_file.flush() # 強制寫入硬碟，避免遊戲崩潰時遺失 Log
+
+# 在遊戲關閉時確保檔案正確關閉
+func _exit_tree() -> void:
+	if log_file != null and log_file.is_open():
+		log_file.store_string("=== Session Ended ===\n")
+		log_file.close()
+
+# 開關視窗的 API
+func toggle_window(show: bool) -> void:
+	is_enabled = show
+	if debug_window != null:
+		debug_window.visible = show
+		# 如果視窗被隱藏，Godot 的渲染引擎就會停止繪製這個 Viewport，效能開銷降為 0

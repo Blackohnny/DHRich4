@@ -5,3 +5,6 @@
 # 忽略私有且可能有版權疑慮的圖片資源
 assets/private_images/*
 !assets/private_images/.placeholder
+
+# 忽略除錯日誌檔案
+dhrich4_debug.log

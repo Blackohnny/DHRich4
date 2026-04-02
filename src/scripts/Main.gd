@@ -16,17 +16,21 @@ var current_pos_index: int = 0
 @onready var player: Sprite2D = $Player
 @onready var board_node: Node2D = $Board
 @onready var info_label: Label = $UI/InfoLabel
+@onready var debug_toggle_btn: Button = $UI/DebugToggleButton
 
 # 載入預設圖片
 var cell_texture: Texture2D
 
 func _ready() -> void:
 	# 在 _ready 階段動態載入圖片
-	cell_texture = ResourceManager.load_image_with_fallback("cell_bg.png") 
+	cell_texture = ResourceManager.load_image_with_fallback("Mew.png") 
 	player.texture = ResourceManager.load_image_with_fallback("Cyndaquil.png") 
 
 	_generate_board_positions()
 	_draw_board_cells()
+	
+	# 綁定實體按鈕
+	debug_toggle_btn.pressed.connect(func(): DebugLogger.toggle_window(not DebugLogger.is_enabled))
 
 	# 遊戲開始，將玩家放到第 0 格
 	if map_positions.size() > 0:
@@ -42,6 +46,10 @@ func _ready() -> void:
 	_update_ui_state("遊戲開始！按空白鍵 (Space) 擲骰子。")
 
 func _process(delta: float) -> void:
+	# 按下 ESC 鍵來開關 Debug 視窗 (Godot 預設 ui_cancel 就是 ESC)
+	if Input.is_action_just_pressed("ui_cancel"):
+		DebugLogger.toggle_window(not DebugLogger.is_enabled)
+
 	# 狀態機：只有在 WAITING_ROLL 狀態才能擲骰子
 	if current_state == GameState.WAITING_ROLL:
 		if Input.is_action_just_pressed("ui_accept"):
@@ -139,3 +147,4 @@ func _end_turn() -> void:
 # 統一管理 UI 更新
 func _update_ui_state(msg: String) -> void:
 	info_label.text = msg
+	DebugLogger.log_msg(msg)

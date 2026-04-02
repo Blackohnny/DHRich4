@@ -26,3 +26,10 @@ rendering_device/driver.windows="d3d12"
 [autoload]
 
 ResourceManager="*res://scripts/ResourceManager.gd"
+
+DebugLogger="*res://scripts/DebugLogger.gd"
+
+[display]
+window/size/viewport_width=1152
+window/size/viewport_height=648
+window/subwindows/embed_subwindows=false
