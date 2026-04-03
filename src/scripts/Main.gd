@@ -4,18 +4,19 @@ extends Node2D
 enum GameState {
 	WAITING_ROLL,  # 等待玩家擲骰子
 	MOVING,        # 玩家移動動畫中 (鎖定輸入)
+	WAITING_FORK,  # [未來擴充] 等待玩家選擇岔路
 	EVENT_HANDLING # 處理格子事件 (買地/付錢/機會命運)
 }
 
 # 變數宣告 (使用強型別以符合 C++ 習慣)
 var current_state: GameState = GameState.WAITING_ROLL
-var current_pos_index: int = 0
+var remaining_steps: int = 0
 
 # 【架構重構】：使用外部的 BoardData 資源
 @export var current_board: BoardData
 
 # 取得場景上的節點參考
-@onready var player: Sprite2D = $Player
+@onready var player: PlayerEntity = $Player as PlayerEntity
 @onready var board_node: Node2D = $Board
 @onready var info_label: Label = $UI/InfoLabel
 @onready var debug_toggle_btn: Button = $UI/DebugToggleButton
@@ -37,20 +38,14 @@ func _ready() -> void:
 	# 綁定實體按鈕
 	debug_toggle_btn.pressed.connect(func(): DebugLogger.toggle_window(not DebugLogger.is_enabled))
 
-	# 遊戲開始，將玩家放到第 0 格
+	# 遊戲開始，初始化玩家
 	if current_board and current_board.cells.size() > 0:
-		player.position = current_board.cells[0].position
-
-		# --- 自動縮放玩家圖示 ---
-		var p_tex_size: Vector2 = player.texture.get_size()
-		var p_target_size: float = 60.0
-		player.scale = Vector2(p_target_size / p_tex_size.x, p_target_size / p_tex_size.y)
-		# --------------------------
+		player.setup(0, current_board)
 
 	# 初始化狀態提示
 	DebugLogger.log_msg("遊戲開始！按空白鍵 (Space) 擲骰子。", true)
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	# 按下 ESC 鍵來開關 Debug 視窗 (Godot 預設 ui_cancel 就是 ESC)
 	if Input.is_action_just_pressed("ui_cancel"):
 		DebugLogger.toggle_window(not DebugLogger.is_enabled)
@@ -65,12 +60,12 @@ func _init_board() -> void:
 	if current_board == null:
 		# 嘗試載入專案內建的 default map
 		current_board = load("res://data/map_default.tres")
-		
+
 		if current_board == null:
 			# 如果連實體檔案都遺失了，這代表專案結構被破壞
 			DebugLogger.log_msg("[FATAL ERROR] 找不到預設地圖檔 'map_default.tres'！遊戲無法繼續。")
 			return
-			
+
 		DebugLogger.log_msg("成功載入專案預設地圖 (8字形)！總格數：" + str(current_board.cells.size()))
 	else:
 		DebugLogger.log_msg("成功載入外部關卡地圖資源！總格數：" + str(current_board.cells.size()))
@@ -113,29 +108,73 @@ func _roll_dice_and_move() -> void:
 	current_state = GameState.MOVING # 切換狀態：移動中
 
 	# Godot 內建亂數，randi_range 產生指定範圍的整數
-	var dice_roll: int = randi_range(1, 4) # 先用 1~4，避免一次走完一整圈
+	var dice_roll: int = randi_range(1, 6) 
+	remaining_steps = dice_roll
 
-	DebugLogger.log_msg("🎲 玩家骰出了 %d 點，移動中..." % dice_roll, true)
+	DebugLogger.log_msg("🎲 玩家骰出了 %d 點，開始移動..." % dice_roll, true)
 
-	var target_index: int = (current_pos_index + dice_roll) % current_board.cells.size()
-	_move_player_to(target_index)
+	_process_next_step()
 
-# 4. 實作玩家平移動畫 (Tween)
-func _move_player_to(target_index: int) -> void:
-	var target_pos: Vector2 = current_board.cells[target_index].position
+# 4. 處理下一步的遞迴邏輯 (處理有向圖走訪與步數消耗)
+func _process_next_step() -> void:
+	if remaining_steps <= 0:
+		# 步數歸零，觸發落地事件
+		_on_movement_completed()
+		return
 
-	var tween: Tween = create_tween()
-	tween.tween_property(player, "position", target_pos, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	var current_index: int = player.current_cell_index
+	var current_cell: CellData = current_board.cells[current_index]
+	var next_nodes: Array[int] = current_cell.next_nodes
 
-	tween.finished.connect(_on_tween_finished.bind(target_index))
+	if next_nodes.is_empty():
+		DebugLogger.log_msg("[ERROR] 地圖斷線！第 %d 格沒有 next_nodes" % current_index)
+		_on_movement_completed()
+		return
 
-func _on_tween_finished(target_index: int) -> void:
-	current_pos_index = target_index
+	# 尋找有效的下一步 (避免回走)
+	var valid_next_nodes: Array[int] = []
+	for node_index in next_nodes:
+		if node_index != player.previous_cell_index:
+			valid_next_nodes.append(node_index)
 
+	if valid_next_nodes.is_empty():
+		# 這是死路 (Dead end)，大富翁裡不該發生，但如果是地圖設計錯誤會走到這
+		DebugLogger.log_msg("[WARNING] 走到死路，無法前進！第 %d 格" % current_index)
+		_on_movement_completed()
+		return
+
+	var target_index: int = -1
+
+	if valid_next_nodes.size() == 1:
+		# 單行道，直接走
+		target_index = valid_next_nodes[0]
+	else:
+		# 岔路處理 (目前先強制選第 0 條路，未來實作 WAITING_FORK)
+		DebugLogger.log_msg("⚠️ 遇到岔路！暫時自動選擇路線...")
+		target_index = valid_next_nodes[0]
+
+	# 扣除步數
+	remaining_steps -= 1
+
+	# 呼叫 PlayerEntity 執行單步移動，並等待動畫完成 Signal
+	player.move_one_step(target_index, current_board)
+	await player.step_finished
+
+	# 動畫走完一格後，檢查路過事件 (Passing Event)
+	_handle_passing_event(target_index)
+
+	# 繼續下一步
+	_process_next_step()
+
+func _handle_passing_event(_cell_index: int) -> void:
+	# 這裡未來可以實作路障卡、經過起點發薪水等邏輯
+	pass
+
+func _on_movement_completed() -> void:
 	current_state = GameState.EVENT_HANDLING 
-	_handle_cell_event(current_pos_index)
+	_handle_cell_event(player.current_cell_index)
 
-# 5. 處理格子事件 (買地、機會命運等邏輯的進入點)
+# 5. 處理格子事件 (落地事件：買地、機會命運等邏輯的進入點)
 func _handle_cell_event(cell_index: int) -> void:
 	var current_cell: CellData = current_board.cells[cell_index]
 

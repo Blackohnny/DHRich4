@@ -7,6 +7,7 @@ This is an AI-driven, single-player Monopoly-style game side project that integr
 ## 🌟 Core Features (Planned)
 
 *   **Minimalist Visuals**: Focus on game logic, APIs, and algorithms without requiring complex art assets.
+*   **Editor Live Preview**: Custom `@tool` MapPreviewer allows real-time WYSIWYG editing of board `.tres` resources directly within the Godot Editor.
 *   **Dynamic Market**: Item and real estate prices fluctuate based on randomization or the player's supply/demand behaviors.
 *   **Real-World Integration**: Connects to real-world news and stock market APIs to dynamically alter in-game stats (e.g., a surge in tech stocks increases tolls in specific zones).
 *   **AI God of Fate**: When landing on a Chance/Fate tile, players interact directly with an AI (Gemini) through a chat interface. The AI determines rewards or punishments based on the player's attitude.
@@ -37,6 +38,23 @@ cd DHRich4
 3. Select the `project.godot` file located inside the `src/` directory of this repository.
 4. Click **"Import & Edit"**.
 5. Press **F5** (or the Play button at the top right) to start the game!
+
+## 🗺️ Editor Map Live Preview & WYSIWYG Editing
+
+This project utilizes Godot's `@tool` system to power a custom `MapPreviewer`, making level design incredibly intuitive without touching a single line of code.
+
+### How to Live Edit Maps:
+1. Open `src/scenes/Main.tscn` in the Godot Editor. You will see a blueprint of blocks and arrows connected in the center of the viewport.
+2. In the **FileSystem** dock (bottom left), double-click to open `src/data/map_default.tres`.
+3. In the **Inspector** dock (right), expand the `Cells` array.
+4. Click on any grid element (`CellData`), and try dragging its `Position` values (X or Y axes).
+5. **Live Update**: As you drag the coordinates, the boxes and arrows in the Main viewport will move **in real-time**!
+
+### How to Preview Different Maps:
+You can use the `MapPreviewer` to visualize any board data file:
+1. Click the `MapPreviewer` node in the Scene Tree of `Main.tscn`.
+2. Locate the **Board Data** property in the Inspector.
+3. Drag and drop any other `.tres` map file from your FileSystem into this property, and the viewport will instantly switch to display the new layout.
 
 ---
 

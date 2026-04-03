@@ -35,6 +35,16 @@
     3. 若歸零則觸發落地事件。
 *   **禁止回走 (No Backtracking)**：在有向圖的岔路判定時，必須過濾掉玩家的來源節點 (Previous Node)。
 
+### 3. 實體解耦與 MVC (Entity Decoupling)
+*   **決策**: 將玩家狀態與平移動畫抽離至獨立的 `PlayerEntity` 節點與腳本。
+*   **原因**: 原先 `Main.gd` (控制器) 直接操作玩家 Sprite 的位置，導致強耦合，且無法支援多玩家。重構後 `Main.gd` 僅負責回合與步數遞迴，透過呼叫 `PlayerEntity.move_one_step()` 並 `await` 其 `step_finished` 訊號 (Signal) 來同步流程。
+*   **效益**: 達成完美的 MVC 架構分離，為未來加入 AI 對手或多人連線打下基礎。
+
+### 4. 編輯器即時預覽工具 (Editor Tooling)
+*   **決策**: 建立獨立的 `@tool MapPreviewer` 節點，專責在 Godot 編輯器內讀取 `.tres` 並繪製地圖。
+*   **原因**: 為了獲得「修改座標即可即時預覽」的開發者體驗 (DX)，需要用到 Godot 的 `@tool`。但若將主控制器 `Main.gd` 設為 `@tool`，其內部的 `_process` 與節點參照會在編輯器內瘋狂噴錯或干擾執行。
+*   **效益**: 確保遊戲主邏輯 (`Main.gd`) 乾淨安全，同時透過 `MapPreviewer.gd` 提供強大的所見即所得 (WYSIWYG) 關卡編輯能力。
+
 ---
 
 ## 🛠️ 階段開發藍圖 (Step-by-Step Roadmap)
@@ -53,12 +63,12 @@
     *   將 `CellData` (單格屬性) 與 `BoardData` (地圖陣列) 抽離為獨立的 `.tres` 檔案。
     *   導入 `next_nodes: Array[int]` 實作有向圖 (Directed Graph) 以支援未來的岔路系統。
     *   實作外部指定關卡與內建 `map_default.tres` (8字形) 的 Fallback 載入機制。
-*   [ ] **2.3 重構移動機制 (Step-by-Step Movement)**:
+*   [x] **2.3 重構移動機制 (Step-by-Step Movement)**:
     *   廢除「直線飛往終點」的做法，改為以「剩餘步數」為核心的逐格移動。
     *   每走一步觸發「路過事件 (Passing Event)」(如路障、岔路選擇)。
     *   步數歸零時才觸發「落地事件 (Landing Event)」。
     *   實作禁止回走 (No Backtracking) 的有向圖走訪邏輯。
-*   [ ] **2.4 實作基礎格子邏輯**: 空地購買、扣過路費等，配合 `PlayerStats` 資產扣除。
+*   [ ] **2.4 實作基礎格子邏輯**: 空地購買、扣過路費等，配合 `PlayerEntity` 資產扣除。
 
 ### Phase 3: GUI 與市場物價系統 (GUI & Dynamic Market)
 *   [ ] **3.1 遊戲主介面**: 使用 `CanvasLayer` 與 `Control` 節點 (Panel, Label) 顯示玩家當前金錢、骰子點數、回合數。
