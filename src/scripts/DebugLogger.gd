@@ -12,6 +12,9 @@ var is_enabled: bool = true # 預設開啟
 # 綁定遊戲主畫面的狀態提示標籤
 var status_label_ref: Label
 
+# 綁定主控制器 (Main.gd) 供作弊按鈕呼叫
+var main_controller: Node
+
 # 實體 Log 檔案變數
 var log_file: FileAccess
 const LOG_FILE_PATH: String = "res://dhrich4_debug.log"
@@ -25,6 +28,10 @@ func _ready() -> void:
 # 讓外部腳本 (如 Main.gd) 將自己的 UI Label 註冊給 Logger
 func register_status_label(label: Label) -> void:
 	status_label_ref = label
+
+# 註冊主控制器，讓作弊按鈕可以呼叫
+func register_main_controller(main: Node) -> void:
+	main_controller = main
 
 # 初始化實體 Log 檔案
 func _init_log_file() -> void:
@@ -44,43 +51,88 @@ func _init_log_file() -> void:
 func _create_debug_window() -> void:
 	if debug_window != null:
 		return # 已經建過了
-		
+
 	# 1. 建立 Window 節點 (真正的作業系統視窗)
 	debug_window = Window.new()
 	debug_window.title = "DHRich4 - AI Debug Console"
-	debug_window.size = Vector2i(500, 400)
+	debug_window.size = Vector2i(600, 450)
 	debug_window.position = Vector2i(100, 100) 
-	
+
 	# 【重要修正】：強制這是一個獨立的 OS 視窗，而不是被主視窗包住 (Embedded)
 	debug_window.wrap_controls = true
 	debug_window.transient = false # 確保它不會被強制置頂或黏在主視窗上
-	
+
 	# 設定視窗關閉行為：點擊 X 時只是隱藏，不要銷毀
 	debug_window.close_requested.connect(func(): toggle_window(false))
-	
-	# 2. 建立文字顯示區 (RichTextLabel 支援捲動和多色文字)
+
+	# 2. 建立主佈局容器 (VBoxContainer)
+	var main_vbox = VBoxContainer.new()
+	main_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	debug_window.add_child(main_vbox)
+
+	# 3. 建立文字顯示區 (RichTextLabel)
 	text_box = RichTextLabel.new()
-	text_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	text_box.size_flags_vertical = Control.SIZE_EXPAND_FILL # 讓 Log 填滿剩餘的垂直空間
 	text_box.scroll_following = true # 自動捲動到最底下
 	text_box.add_theme_font_size_override("normal_font_size", 14)
 	text_box.bbcode_enabled = true # 啟用 BBCode 來支援多色文字
+
+	# 給文字框一個深色背景 (改用 PanelContainer 確保佈局正確展開)
+	var bg = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.1, 1.0)
+	bg.add_theme_stylebox_override("panel", style)
+	bg.size_flags_vertical = Control.SIZE_EXPAND_FILL # 讓 Panel 填滿上方空間
 	
-	# 給文字框一個深色背景，字體為綠色
-	var bg = ColorRect.new()
-	bg.color = Color(0.1, 0.1, 0.1, 1.0)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	
-	# 3. 組裝節點樹
-	debug_window.add_child(bg)
-	debug_window.add_child(text_box)
-	
-	# 4. 將視窗加入到目前的 Scene Tree 中
+	bg.add_child(text_box)
+	main_vbox.add_child(bg)
+
+	# 4. 建立作弊按鈕區 (HBoxContainer)
+	var cheat_hbox = HBoxContainer.new()
+	main_vbox.add_child(cheat_hbox)
+
+	# 加入 1~6 步的測試按鈕
+	for i in range(1, 7):
+		var btn = Button.new()
+		btn.text = " %d步 " % i
+		# 使用 bind 將參數綁定到回呼函式中
+		btn.pressed.connect(_on_cheat_move_pressed.bind(i))
+		cheat_hbox.add_child(btn)
+
+	# 加入 AI 測試按鈕
+	var btn_test_ai = Button.new()
+	btn_test_ai.text = " Test AI "
+	btn_test_ai.pressed.connect(_on_test_ai_pressed)
+	cheat_hbox.add_child(btn_test_ai)
+
+	# 預留空按鈕
+	for i in range(2):
+		var empty_btn = Button.new()
+		empty_btn.text = " 預留 "
+		cheat_hbox.add_child(empty_btn)
+
+	# 5. 將視窗加入到目前的 Scene Tree 中
 	call_deferred("add_child", debug_window)
-	
+
 	log_msg("Debug Console Initialized. Log file saved at: " + ProjectSettings.globalize_path(LOG_FILE_PATH))
 
+# ---------------------------------------------------------
+# 作弊按鈕事件處理 (Cheat Button Handlers)
+# ---------------------------------------------------------
+
+func _on_cheat_move_pressed(steps: int) -> void:
+	if main_controller != null and main_controller.has_method("force_move"):
+		main_controller.force_move(steps)
+	else:
+		log_msg("[ERROR] Main Controller 未註冊或不支援 force_move！")
+
+func _on_test_ai_pressed() -> void:
+	log_msg("正在測試 AI API 呼叫 (尚未實作實體連線)...")
+	# TODO: 未來 Phase 5 實作 HTTPRequest 發送
+
+# ---------------------------------------------------------
 # 全域呼叫的印 Log 函式
-# update_ui: 如果為 true，這段文字會同時顯示在遊戲主畫面的提示框中
+# ---------------------------------------------------------# update_ui: 如果為 true，這段文字會同時顯示在遊戲主畫面的提示框中
 func log_msg(msg: String, update_ui: bool = false) -> void:
 	# 加上時間戳記
 	var time_dict = Time.get_datetime_dict_from_system()

@@ -34,6 +34,8 @@ func _ready() -> void:
 
 	# 將主畫面的 UI 文字框註冊給 DebugLogger 統一管理
 	DebugLogger.register_status_label(info_label)
+	# 把自己註冊給 Logger，讓作弊按鈕可以呼叫
+	DebugLogger.register_main_controller(self)
 
 	# 綁定實體按鈕
 	debug_toggle_btn.pressed.connect(func(): DebugLogger.toggle_window(not DebugLogger.is_enabled))
@@ -131,6 +133,16 @@ func _draw_board_cells() -> void:
 		label.text = str(i)
 		label.position = Vector2(-10, -10) # 微調文字置中
 		cell.add_child(label)
+
+# --- 作弊與除錯 API ---
+func force_move(steps: int) -> void:
+	if current_state == GameState.WAITING_ROLL:
+		current_state = GameState.MOVING
+		remaining_steps = steps
+		DebugLogger.log_msg("⚠️ 作弊：強制走 %d 步！" % steps, true)
+		_process_next_step()
+	else:
+		DebugLogger.log_msg("[WARNING] 目前狀態不允許移動，請等回合結束！")
 
 # 3. 擲骰子並觸發移動
 func _roll_dice_and_move() -> void:
