@@ -58,3 +58,18 @@ func move_one_step(target_index: int, board: BoardData) -> void:
 		current_cell_index = target_index
 		emit_signal("step_finished")
 	)
+
+# 資產操作 API
+func add_money(amount: int) -> void:
+	money += amount
+	DebugLogger.log_msg("玩家 %d 獲得 $%d，目前餘額: $%d" % [player_id, amount, money], true)
+
+func deduct_money(amount: int) -> bool:
+	if money >= amount:
+		money -= amount
+		DebugLogger.log_msg("玩家 %d 失去 $%d，目前餘額: $%d" % [player_id, amount, money], true)
+		return true
+	else:
+		money = 0
+		DebugLogger.log_msg("玩家 %d 破產了！" % player_id, true)
+		return false

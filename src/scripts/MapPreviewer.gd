@@ -79,11 +79,19 @@ func _draw() -> void:
 		var rect := Rect2(pos - cell_size / 2, cell_size)
 		
 		# 根據類型決定顏色
-		var bg_color: Color = Color(0.3, 0.3, 0.3, 0.5) # 預設半透明灰
-		if cell.type == CellData.CellType.START:
+		var bg_color: Color = Color(0.3, 0.3, 0.3, 0.5) # 預設半透明深灰 (代表空地或是基底 CellData)
+		
+		if cell is StartCellData:
 			bg_color = Color(0.8, 0.8, 0.2, 0.5) # 起點：半透明黃
-		elif cell.type == CellData.CellType.EVENT:
+		elif cell is ChanceCellData or cell is DestinyCellData or cell is MinigameCellData:
 			bg_color = Color(0.8, 0.2, 0.8, 0.5) # 事件：半透明紫
+		elif cell is ShopCellData:
+			bg_color = Color(0.2, 0.8, 0.2, 0.5) # 商店：半透明綠
+		elif cell is LandCellData:
+			bg_color = Color(0.3, 0.3, 0.3, 0.5) # 土地：半透明深灰
+		elif cell.name == "未命名格子" and cell.next_nodes.is_empty():
+			# 簡易防呆：如果名稱沒改且沒有連線，暗示可能是未初始化的 NULL
+			bg_color = Color(1.0, 0.0, 0.0, 0.5) # 半透明紅
 			
 		# 畫格子背景與外框
 		draw_rect(rect, bg_color, true)

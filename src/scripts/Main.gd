@@ -88,12 +88,18 @@ func _draw_board_cells() -> void:
 		# --------------------------
 
 		# 根據格子種類給予不同的顏色標示 (方便 Debug)
-		if cell_data.type == CellData.CellType.START:
+		if cell_data is StartCellData:
 			cell.modulate = Color(0.8, 0.8, 0.2, 1.0) # 起點：黃色
-		elif cell_data.type == CellData.CellType.EVENT:
-			cell.modulate = Color(0.8, 0.2, 0.8, 1.0) # 事件：紫色
+		elif cell_data is ChanceCellData or cell_data is DestinyCellData or cell_data is MinigameCellData:
+			cell.modulate = Color(0.8, 0.2, 0.8, 1.0) # 事件類：紫色
+		elif cell_data is ShopCellData:
+			cell.modulate = Color(0.2, 0.8, 0.2, 1.0) # 商店：綠色
+		elif cell_data is LandCellData:
+			cell.modulate = Color(0.3, 0.3, 0.3, 1.0) # 土地：深灰色
+		elif cell_data.name == "未命名格子" and cell_data.next_nodes.is_empty():
+			cell.modulate = Color(1.0, 0.0, 0.0, 1.0) # 未定義或錯誤：紅色
 		else:
-			cell.modulate = Color(0.3, 0.3, 0.3, 1.0) # 土地：灰色
+			cell.modulate = Color(0.5, 0.5, 0.5, 1.0) # 空地或預設 CellData：淺灰色
 
 		board_node.add_child(cell)
 
@@ -124,7 +130,7 @@ func _process_next_step() -> void:
 
 	var current_index: int = player.current_cell_index
 	var current_cell: CellData = current_board.cells[current_index]
-	var next_nodes: Array[int] = current_cell.next_nodes
+	var next_nodes: Array = current_cell.next_nodes # 放寬為無型別陣列，避免 Godot 序列化型別錯誤
 
 	if next_nodes.is_empty():
 		DebugLogger.log_msg("[ERROR] 地圖斷線！第 %d 格沒有 next_nodes" % current_index)
@@ -134,8 +140,9 @@ func _process_next_step() -> void:
 	# 尋找有效的下一步 (避免回走)
 	var valid_next_nodes: Array[int] = []
 	for node_index in next_nodes:
-		if node_index != player.previous_cell_index:
-			valid_next_nodes.append(node_index)
+		var target_node_int = int(node_index) # 強制轉為整數
+		if target_node_int != player.previous_cell_index:
+			valid_next_nodes.append(target_node_int)
 
 	if valid_next_nodes.is_empty():
 		# 這是死路 (Dead end)，大富翁裡不該發生，但如果是地圖設計錯誤會走到這
@@ -166,9 +173,12 @@ func _process_next_step() -> void:
 	# 繼續下一步
 	_process_next_step()
 
-func _handle_passing_event(_cell_index: int) -> void:
-	# 這裡未來可以實作路障卡、經過起點發薪水等邏輯
-	pass
+func _handle_passing_event(cell_index: int) -> void:
+	var current_cell: CellData = current_board.cells[cell_index]
+	if current_cell is StartCellData:
+		_passing_start_event(current_cell)
+	else:
+		pass # 其他格子路過暫時無事發生
 
 func _on_movement_completed() -> void:
 	current_state = GameState.EVENT_HANDLING 
@@ -178,15 +188,106 @@ func _on_movement_completed() -> void:
 func _handle_cell_event(cell_index: int) -> void:
 	var current_cell: CellData = current_board.cells[cell_index]
 
-	# 將詳細資訊印到 DebugLogger，並同步更新到主畫面的 UI (第二個參數傳 true)
+	# 印出基本的踩點 Log
 	var log_str = "📍 停在第 %d 格 [%s]" % [cell_index, current_cell.name]
-	if current_cell.type == CellData.CellType.LAND:
-		log_str += " (售價: $%d, 擁有者: %d)" % [current_cell.price, current_cell.owner_id]
 	DebugLogger.log_msg(log_str, true)
 
-	# 為了測試狀態機循環，我們先用定時器假裝處理了 1 秒鐘的事件，然後回到可擲骰子狀態
-	await get_tree().create_timer(1.0).timeout 
+	# Event Dispatcher: 根據類型路由到不同的 Handler
+	if current_cell is StartCellData:
+		_landing_start_event(current_cell)
+	elif current_cell is LandCellData:
+		_landing_land_event(current_cell)
+	elif current_cell is ChanceCellData:
+		_landing_chance_event(current_cell)
+	elif current_cell is DestinyCellData:
+		_landing_destiny_event(current_cell)
+	elif current_cell is MinigameCellData:
+		_landing_minigame_event(current_cell)
+	elif current_cell is ShopCellData:
+		_landing_shop_event(current_cell)
+	elif current_cell.name == "未命名格子" and current_cell.next_nodes.is_empty():
+		DebugLogger.log_msg("[WARNING] 踩到了未定義的格子 (NULL/Base)！", true)
+		_end_turn()
+	else:
+		DebugLogger.log_msg("這是一片空地，什麼也沒發生。", true)
+		_end_turn()
 
+# ---------------------------------------------------------
+# Event Handlers (事件處理函式)
+# ---------------------------------------------------------
+
+func _passing_start_event(cell: CellData) -> void:
+	if cell is StartCellData:
+		var start_cell = cell as StartCellData
+		DebugLogger.log_msg("路過起點，領取薪水 $%d！" % start_cell.salary_amount)
+		player.add_money(start_cell.salary_amount)
+	else:
+		DebugLogger.log_msg("路過起點，領取薪水 $2000！(預設)")
+		player.add_money(2000)
+
+func _landing_start_event(_cell: CellData) -> void:
+	DebugLogger.log_msg("停在起點上。休息一回合。", true)
+	_end_turn()
+
+func _landing_land_event(cell: CellData) -> void:
+	if cell is LandCellData:
+		var land = cell as LandCellData
+		if land.owner_id == -1:
+			# 無主地，處理購買邏輯 (先用 Auto-buy 測試)
+			DebugLogger.log_msg("踩到無主地 [%s]，售價 $%d，自動購買測試..." % [land.name, land.price])
+			if player.deduct_money(land.price):
+				land.owner_id = player.player_id
+				DebugLogger.log_msg("購買成功！[%s] 擁有者變為玩家 %d" % [land.name, player.player_id])
+			else:
+				DebugLogger.log_msg("錢不夠，無法購買 [%s]！" % land.name)
+		elif land.owner_id != player.player_id:
+			# 別人的地，處理付過路費邏輯
+			DebugLogger.log_msg("踩到別人的地 [%s]，需支付過路費 $%d！" % [land.name, land.base_toll])
+			player.deduct_money(land.base_toll)
+			# 未來: 將錢加給 owner
+		else:
+			# 自己的地
+			DebugLogger.log_msg("踩到自己的地 [%s]，歡迎回家！" % land.name)
+	else:
+		DebugLogger.log_msg("[ERROR] 型別錯誤：格子宣稱是 LAND，但不是 LandCellData 實體！")
+	
+	await get_tree().create_timer(1.0).timeout 
+	_end_turn()
+
+func _landing_chance_event(cell: CellData) -> void:
+	if cell is ChanceCellData:
+		var chance = cell as ChanceCellData
+		DebugLogger.log_msg("觸發機會事件 [%s]！" % chance.chance_id)
+	else:
+		DebugLogger.log_msg("觸發機會事件！(未設定)")
+	await get_tree().create_timer(1.0).timeout 
+	_end_turn()
+
+func _landing_destiny_event(cell: CellData) -> void:
+	if cell is DestinyCellData:
+		var destiny = cell as DestinyCellData
+		DebugLogger.log_msg("觸發命運事件 [%s]！" % destiny.destiny_id)
+	else:
+		DebugLogger.log_msg("觸發命運事件！(未設定)")
+	await get_tree().create_timer(1.0).timeout 
+	_end_turn()
+
+func _landing_minigame_event(cell: CellData) -> void:
+	if cell is MinigameCellData:
+		var minigame = cell as MinigameCellData
+		DebugLogger.log_msg("進入小遊戲 [%s]！難度: %d" % [minigame.minigame_id, minigame.difficulty])
+	else:
+		DebugLogger.log_msg("進入小遊戲！(未設定)")
+	await get_tree().create_timer(1.0).timeout 
+	_end_turn()
+
+func _landing_shop_event(cell: CellData) -> void:
+	if cell is ShopCellData:
+		var shop = cell as ShopCellData
+		DebugLogger.log_msg("進入商店 [%s]！" % shop.shop_id)
+	else:
+		DebugLogger.log_msg("進入商店！(未設定)")
+	await get_tree().create_timer(1.0).timeout 
 	_end_turn()
 
 # 6. 回合結束，準備下一回合
