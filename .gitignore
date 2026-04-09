@@ -1,3 +1,6 @@
 
 # 忽略 Gemini CLI 個人使用習慣設定檔
 .gemini/
+
+# Ignore AI configuration file with real API keys
+ai_config.json

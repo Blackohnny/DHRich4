@@ -39,6 +39,18 @@ cd DHRich4
 4. Click **"Import & Edit"**.
 5. Press **F5** (or the Play button at the top right) to start the game!
 
+## 🤖 How to Setup AI Features
+
+One of the core features of this game is the "AI God of Destiny". To protect your privacy and API billing, this project does not include real API keys. If you want to test this feature locally, please follow these steps:
+
+1. Navigate to the `src/` directory.
+2. Find the `ai_config.example.json` file.
+3. Make a copy of this file and rename it to `ai_config.json`.
+4. Open `ai_config.json` and fill in your OpenAI-compatible Endpoint and your real API Key.
+5. Start the game. When you land on a "Chance" or "Destiny" cell, you will experience real-time interactive events driven by AI!
+
+*(Note: If you do not configure this file, or if the parameters are invalid, the game will gracefully degrade and switch to a traditional random card-drawing mode instead of crashing.)*
+
 ## 🗺️ Editor Map Live Preview & WYSIWYG Editing
 
 This project utilizes Godot's `@tool` system to power a custom `MapPreviewer`, making level design incredibly intuitive without touching a single line of code.

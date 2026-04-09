@@ -1,0 +1,12 @@
+{
+  "_comment_1": "DHRich4 AI 設定檔範本 (AI Configuration Template)",
+  "_comment_2": "請將此檔案複製一份，命名為: ai_config.json",
+  "_comment_3": "並將 ai_config.json 放在專案 src/ 目錄下。注意：請勿將其加入版本控制！",
+  
+  "provider": "openai_compatible",
+  "api_endpoint": "https://your-api-endpoint.com/chat/completions",
+  "api_key": "your_api_key_here",
+  "model": "gpt-4o",
+  "temperature": 0.8,
+  "max_tokens": 1000
+}

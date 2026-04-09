@@ -292,11 +292,46 @@ func _landing_land_event(cell: CellData) -> void:
 func _landing_chance_event(cell: CellData) -> void:
 	if cell is ChanceCellData:
 		var chance = cell as ChanceCellData
-		DebugLogger.log_msg("觸發機會事件 [%s]！" % chance.chance_id)
+		
+		# 【優雅降級架構】檢查 AI 是否可用
+		# 注意：為了避免編輯器編譯錯誤，我們動態尋找 AIManager 節點
+		var ai_manager = get_node_or_null("/root/AIManager")
+		if ai_manager != null and ai_manager.is_ai_ready():
+			DebugLogger.log_msg("✨ 觸發 AI 機會事件 [%s]！準備連線..." % chance.chance_id, true)
+			# TODO: Phase 5 實作 AI 互動介面與連線邏輯
+		else:
+			# 傳統無 AI 模式 (Fallback)
+			_trigger_traditional_chance_event(chance)
 	else:
 		DebugLogger.log_msg("觸發機會事件！(未設定)")
-	await get_tree().create_timer(1.0).timeout 
+	
+	# 等待一秒讓玩家看清楚訊息
+	await get_tree().create_timer(1.5).timeout 
 	_end_turn()
+
+# 傳統抽卡模式 (免 AI)
+func _trigger_traditional_chance_event(chance: ChanceCellData) -> void:
+	# 定義傳統的隨機事件庫 (未來可以抽出到獨立的 JSON)
+	var traditional_events = [
+		{"msg": "發票中獎！獲得 $500", "money": 500},
+		{"msg": "扶老奶奶過馬路，市長獎勵 $1000", "money": 1000},
+		{"msg": "超速被開單，罰款 $300", "money": -300},
+		{"msg": "錢包掉在路上，損失 $800", "money": -800},
+		{"msg": "只是個路過的好心人，什麼事都沒發生。", "money": 0}
+	]
+	
+	# 隨機抽取一個事件
+	var result = traditional_events.pick_random()
+	
+	# 印出結果
+	var title = "[傳統機會: %s] " % chance.chance_id
+	DebugLogger.log_msg("🎴 " + title + result.msg, true)
+	
+	# 執行獎懲
+	if result.money > 0:
+		player.add_money(result.money)
+	elif result.money < 0:
+		player.deduct_money(-result.money)
 
 func _landing_destiny_event(cell: CellData) -> void:
 	if cell is DestinyCellData:

@@ -49,6 +49,20 @@
 
 ## 🛠️ 階段開發藍圖 (Step-by-Step Roadmap)
 
+### 5. AI 設定檔雙路徑與優雅降級 (AI Config Fallback)
+*   **決策**: 捨棄 Godot 內建的 `ConfigFile` (.cfg)，改用 `.json` 作為 AI 設定檔格式。並實作 `AIManager` AutoLoad 單例。
+*   **原因**: 
+    *   Godot 的 `.cfg` 解析器對於超長字串 (如超過 300 字元的 JWT API Key) 會拋出 `ERR_PARSE_ERROR`。JSON 解析器更為穩健。
+    *   為了支援未來發佈 (Export) 後玩家自帶 Key (BYOK) 的模式，設定檔必須具備雙路徑尋找能力。
+*   **Fallback 機制**: 
+    1. 優先尋找玩家目錄 `user://ai_config.json`。
+    2. 尋找開發目錄 `res://ai_config.json`。
+    3. 若皆不存在，或參數設定異常，遊戲不會崩潰，而是觸發**優雅降級 (Graceful Degradation)**，將機會/命運格切換為傳統隨機抽卡模式。
+
+---
+
+## 🛠️ 階段開發藍圖 (Step-by-Step Roadmap)
+
 ### Phase 1: 基礎建設與平移動畫 (Foundation & Movement) [✅ 完成]
 *   [x] **1.1 建立 Godot 專案**: 在 Windows 下開啟 Godot 4，建立專案於 WSL 資料夾 (`/home/j8ohnny/workspace/DHRich4`)。
 *   [x] **1.2 建立地圖資料結構 (Model)**: 寫一個 GDScript (`MapManager.gd`)，定義環狀棋盤的每一格座標 (例如 Array of Vector2)。
@@ -57,7 +71,7 @@
 *   [x] **1.5 資源覆寫防護 (ResourceManager)**: 建立 private/public 雙資料夾與 Fallback 動態載入機制。
 *   [x] **1.6 獨立除錯系統 (DebugLogger)**: 建立不綁死於遊戲畫面的 OS Window 與實體 Log 寫入機制。
 
-### Phase 2: 核心遊戲迴圈與地圖重構 (Core Loop & Map Refactoring) [🚧 進行中]
+### Phase 2: 核心遊戲迴圈與地圖重構 (Core Loop & Map Refactoring) [✅ 完成]
 *   [x] **2.1 建立基礎狀態機**: 定義遊戲狀態 (WAITING_ROLL, MOVING, EVENT_HANDLING) 並實作防連點。
 *   [x] **2.2 抽離地圖為自訂資源 (Godot Resource)**: 
     *   將 `CellData` (單格屬性) 與 `BoardData` (地圖陣列) 抽離為獨立的 `.tres` 檔案。
@@ -68,7 +82,10 @@
     *   每走一步觸發「路過事件 (Passing Event)」(如路障、岔路選擇)。
     *   步數歸零時才觸發「落地事件 (Landing Event)」。
     *   實作禁止回走 (No Backtracking) 的有向圖走訪邏輯。
-*   [ ] **2.4 實作基礎格子邏輯**: 空地購買、扣過路費等，配合 `PlayerEntity` 資產扣除。
+*   [x] **2.4 實作基礎格子邏輯**: 
+    *   導入多型 Resource 架構，將 `CellData` 拆分為 `LandCellData`, `ChanceCellData` 等子類別。
+    *   在 `Main.gd` 實作 Event Dispatcher，透過 `is` 關鍵字路由不同事件。
+    *   實作基本的扣款、買地、路過起點領薪水等邏輯。
 
 ### Phase 3: GUI 與市場物價系統 (GUI & Dynamic Market)
 *   [ ] **3.1 遊戲主介面**: 使用 `CanvasLayer` 與 `Control` 節點 (Panel, Label) 顯示玩家當前金錢、骰子點數、回合數。
@@ -84,22 +101,23 @@
 *   [ ] **4.2 抓取外部資料**: 尋找免費的新聞或股市 API (如 NewsAPI, Finnhub)，實作 GET 請求取得當日頭條或指數。
 *   [ ] **4.3 現實影響遊戲**: 解析 API 回傳的 JSON，提取關鍵字或漲跌幅，寫一個函式將其轉換為遊戲影響 (例如：「科技股上漲 2% -> 遊戲內所有過路費 + 20%」)，並顯示在 UI 系統訊息區。
 
-### Phase 5: AI 命運之神 (Gemini Interactive Event)
-*   [ ] **5.1 建立對話 UI**: 製作包含 `RichTextLabel` (顯示歷史對話) 與 `LineEdit` (玩家輸入) 的對話框面板。
-*   [ ] **5.2 串接 Gemini API**: 實作 POST 請求發送至 Gemini REST API。
-*   [ ] **5.3 實作三回合對話機制**:
+### Phase 5: AI 命運之神 (Gemini Interactive Event) [🚧 進行中]
+*   [x] **5.1 建立 AI 連線管理器 (AIManager)**: 實作讀取 `ai_config.json` 與雙路徑 (`user://`, `res://`) 的優雅降級。
+*   [x] **5.2 串接 OpenAI 相容 API**: 實作 `HTTPRequest` 發送至 AI Endpoint，並測試成功。
+*   [ ] **5.3 建立對話 UI**: 製作包含 `RichTextLabel` (顯示歷史對話) 與 `LineEdit` (玩家輸入) 的對話框面板。
+*   [ ] **5.4 實作三回合對話機制**:
     *   **回合 1-2**: System Prompt 設定 AI 為神秘商人。將玩家輸入傳給 AI，AI 回傳對話顯示於 UI。
     *   **回合 3**: 強制 Prompt 要求 AI 總結對話，並輸出嚴格的 JSON 格式 (例如 `{"dialog": "最後一句話", "reward_money": 1000, "item": "none"}`)。
-*   [ ] **5.4 事件結算**: 解析最後回合的 JSON，套用獎懲至 `PlayerStats`，並關閉對話框。
+*   [ ] **5.5 事件結算**: 解析最後回合的 JSON，套用獎懲至 `PlayerStats`，並關閉對話框。
 
 ---
 
 ## 📈 進度追蹤表 (Progress Tracker)
-- [ ] Phase 1 完成
-- [ ] Phase 2 完成
+- [x] Phase 1 完成
+- [x] Phase 2 完成
 - [ ] Phase 3 完成
 - [ ] Phase 4 完成
-- [ ] Phase 5 完成
+- [ ] Phase 5 進行中
 
 ---
 *文件建立日期: 2026-04-01*

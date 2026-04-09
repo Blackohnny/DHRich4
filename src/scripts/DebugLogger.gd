@@ -87,7 +87,7 @@ func _create_debug_window() -> void:
 	bg.add_child(text_box)
 	main_vbox.add_child(bg)
 
-	# 4. 建立作弊按鈕區 (HBoxContainer)
+	# 4. 建立作弊按鈕區 (HBoxContainer) - 移動控制
 	var cheat_hbox = HBoxContainer.new()
 	main_vbox.add_child(cheat_hbox)
 
@@ -99,21 +99,30 @@ func _create_debug_window() -> void:
 		btn.pressed.connect(_on_cheat_move_pressed.bind(i))
 		cheat_hbox.add_child(btn)
 
-	# 加入 AI 測試按鈕
+	# 5. 建立 AI 工具按鈕區 (HBoxContainer) - AI 控制
+	var ai_tools_hbox = HBoxContainer.new()
+	main_vbox.add_child(ai_tools_hbox)
+
+	# 加入 AI 重新讀取設定按鈕
+	var btn_reload_ai = Button.new()
+	btn_reload_ai.text = " 讀取 AI 設定 "
+	btn_reload_ai.pressed.connect(_on_reload_ai_pressed)
+	ai_tools_hbox.add_child(btn_reload_ai)
+
+	# 加入 AI 測試連線按鈕
 	var btn_test_ai = Button.new()
-	btn_test_ai.text = " Test AI "
+	btn_test_ai.text = " 測試 AI 連線 "
 	btn_test_ai.pressed.connect(_on_test_ai_pressed)
-	cheat_hbox.add_child(btn_test_ai)
+	ai_tools_hbox.add_child(btn_test_ai)
 
 	# 預留空按鈕
 	for i in range(2):
 		var empty_btn = Button.new()
 		empty_btn.text = " 預留 "
-		cheat_hbox.add_child(empty_btn)
+		ai_tools_hbox.add_child(empty_btn)
 
-	# 5. 將視窗加入到目前的 Scene Tree 中
+	# 6. 將視窗加入到目前的 Scene Tree 中
 	call_deferred("add_child", debug_window)
-
 	log_msg("Debug Console Initialized. Log file saved at: " + ProjectSettings.globalize_path(LOG_FILE_PATH))
 
 # ---------------------------------------------------------
@@ -126,9 +135,26 @@ func _on_cheat_move_pressed(steps: int) -> void:
 	else:
 		log_msg("[ERROR] Main Controller 未註冊或不支援 force_move！")
 
+func _on_reload_ai_pressed() -> void:
+	var ai_manager = get_node_or_null("/root/AIManager")
+	if ai_manager != null and ai_manager.has_method("load_config"):
+		log_msg("🔄 重新讀取 AI 設定檔...")
+		ai_manager.load_config()
+	else:
+		log_msg("[ERROR] AIManager 未註冊，無法重新讀取設定！")
+
 func _on_test_ai_pressed() -> void:
-	log_msg("正在測試 AI API 呼叫 (尚未實作實體連線)...")
-	# TODO: 未來 Phase 5 實作 HTTPRequest 發送
+	var ai_manager = get_node_or_null("/root/AIManager")
+	if ai_manager == null or not ai_manager.has_method("is_ai_ready"):
+		log_msg("[ERROR] AIManager 未註冊！")
+		return
+		
+	if not ai_manager.is_ai_ready():
+		log_msg("[ERROR] AI 未啟用，無法測試連線！請先讀取正確的設定檔。")
+		return
+		
+	log_msg("📡 正在測試 AI API 連線至: " + ai_manager.api_endpoint)
+	ai_manager.test_connection()
 
 # ---------------------------------------------------------
 # 全域呼叫的印 Log 函式

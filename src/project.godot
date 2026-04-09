@@ -19,6 +19,7 @@ config/icon="res://assets/icon.svg"
 
 ResourceManager="*res://scripts/ResourceManager.gd"
 DebugLogger="*res://scripts/DebugLogger.gd"
+AIManager="*res://scripts/AIManager.gd"
 
 [display]
 

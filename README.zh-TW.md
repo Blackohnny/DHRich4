@@ -40,6 +40,18 @@ cd DHRich4
 4. 點擊 **"Import & Edit"**。
 5. 在編輯器中按下 **F5** (或右上角的播放鍵) 即可開始遊戲！
 
+## 🤖 如何啟用 AI 命運之神功能 (Setup AI Features)
+
+本遊戲的核心特色之一為「AI 命運之神」。為保護您的隱私與 API 費用，本專案不內建真實的 API Key。如果您希望在本地測試此功能，請依照以下步驟設定：
+
+1. 進入專案的 `src/` 目錄。
+2. 找到 `ai_config.example.json` 檔案。
+3. 將該檔案複製一份，並重新命名為 `ai_config.json`。
+4. 打開 `ai_config.json`，填入您的 OpenAI 相容 Endpoint 與真實的 API Key。
+5. 啟動遊戲。當您踩中「機會」或「命運」格時，即可體驗與 AI 的即時互動！
+
+*(註：如果您未設定此檔案，或檔案內的參數不合法，遊戲不會崩潰，而是會優雅降級 (Graceful Degradation) 切換為「傳統隨機抽卡」模式。)*
+
 ## 🗺️ 所見即所得的地圖編輯器 (Map Live Preview)
 
 本專案利用 Godot 的 `@tool` 系統，開發了專屬的 `MapPreviewer`，讓關卡設計變得極度直覺，完全無需修改程式碼。
