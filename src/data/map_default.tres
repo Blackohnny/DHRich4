@@ -145,4 +145,9 @@ next_nodes = [19]
 
 [resource]
 script = ExtResource("2_q8nuo")
+price_multiplier = 1.05
+salary_multiplier = 1.1
+shop_specialties = Array[String](["PineappleCake"])
+shop_banned_items = Array[String](["RoadBlock"])
+bad_destiny_weight = 0.9
 cells = Array[ExtResource("1_tpgd8")]([SubResource("Resource_ukt8u"), SubResource("Resource_q8nuo"), SubResource("Resource_onvxu"), SubResource("Resource_uruef"), SubResource("Resource_ey2nj"), SubResource("Resource_b2wno"), SubResource("Resource_uc4ht"), SubResource("Resource_kqqdt"), SubResource("Resource_0wrra"), SubResource("Resource_vpa8q"), SubResource("Resource_wdw6g"), SubResource("Resource_aan7i"), SubResource("Resource_gstrh"), SubResource("Resource_tm71y"), SubResource("Resource_6klw2"), SubResource("Resource_fo63c"), SubResource("Resource_4ya48"), SubResource("Resource_1mj75"), SubResource("Resource_d8ar3"), SubResource("Resource_w24tw")])

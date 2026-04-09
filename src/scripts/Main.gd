@@ -66,9 +66,32 @@ func _init_board() -> void:
 			DebugLogger.log_msg("[FATAL ERROR] 找不到預設地圖檔 'map_default.tres'！遊戲無法繼續。")
 			return
 
-		DebugLogger.log_msg("成功載入專案預設地圖 (8字形)！總格數：" + str(current_board.cells.size()))
+		DebugLogger.log_msg("成功載入專案預設地圖 (8字形)！")
 	else:
-		DebugLogger.log_msg("成功載入外部關卡地圖資源！總格數：" + str(current_board.cells.size()))
+		DebugLogger.log_msg("成功載入外部關卡地圖資源！")
+
+	# --- 印出地圖的全域與格子參數 ---
+	DebugLogger.log_msg("====== 地圖環境參數 ======")
+	DebugLogger.log_msg("物價倍率: " + str(current_board.price_multiplier))
+	DebugLogger.log_msg("薪水倍率: " + str(current_board.salary_multiplier))
+	DebugLogger.log_msg("商店特產 (白名單): " + str(current_board.shop_specialties))
+	DebugLogger.log_msg("商店違禁品 (黑名單): " + str(current_board.shop_banned_items))
+	DebugLogger.log_msg("壞命運權重: " + str(current_board.bad_destiny_weight))
+	DebugLogger.log_msg("==========================")
+
+	DebugLogger.log_msg("總格數：" + str(current_board.cells.size()))
+	for i in range(current_board.cells.size()):
+		var cell = current_board.cells[i]
+		var type_str = "未知"
+		if cell is StartCellData: type_str = "起點"
+		elif cell is LandCellData: type_str = "土地 (售價:$%d)" % (cell as LandCellData).price
+		elif cell is ChanceCellData: type_str = "機會"
+		elif cell is DestinyCellData: type_str = "命運"
+		elif cell is MinigameCellData: type_str = "小遊戲"
+		elif cell is ShopCellData: type_str = "商店"
+		else: type_str = "空地"
+		
+		DebugLogger.log_msg("  [%02d] %s - %s" % [i, cell.name, type_str])
 
 # 2. (純視覺) 把棋盤畫出來
 func _draw_board_cells() -> void:
