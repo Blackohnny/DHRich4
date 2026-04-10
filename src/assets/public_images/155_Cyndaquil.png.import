@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bxwva7oq26ygf"
-path="res://.godot/imported/Metagross.png-b79fc3f42f9b59de900a426771a62a70.ctex"
+uid="uid://khu2it8qe8ro"
+path="res://.godot/imported/155_Cyndaquil.png-5500c3d3ee9be0ca1d58ef3255b711cb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/public_images/Metagross.png"
-dest_files=["res://.godot/imported/Metagross.png-b79fc3f42f9b59de900a426771a62a70.ctex"]
+source_file="res://assets/public_images/155_Cyndaquil.png"
+dest_files=["res://.godot/imported/155_Cyndaquil.png-5500c3d3ee9be0ca1d58ef3255b711cb.ctex"]
 
 [params]
 

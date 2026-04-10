@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://khu2it8qe8ro"
-path="res://.godot/imported/Cyndaquil.png-7694210bb67bc51780dcda9804f172ac.ctex"
+uid="uid://dj4k4n1u4of4d"
+path="res://.godot/imported/138_Omanyte.png-bed5bb655bc2798c0d16dbb1b856c98a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/public_images/Cyndaquil.png"
-dest_files=["res://.godot/imported/Cyndaquil.png-7694210bb67bc51780dcda9804f172ac.ctex"]
+source_file="res://assets/public_images/138_Omanyte.png"
+dest_files=["res://.godot/imported/138_Omanyte.png-bed5bb655bc2798c0d16dbb1b856c98a.ctex"]
 
 [params]
 

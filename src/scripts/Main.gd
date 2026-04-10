@@ -26,8 +26,8 @@ var cell_texture: Texture2D
 
 func _ready() -> void:
 	# 在 _ready 階段動態載入圖片
-	cell_texture = ResourceManager.load_image_with_fallback("Mew.png") 
-	player.texture = ResourceManager.load_image_with_fallback("Cyndaquil.png") 
+	cell_texture = ResourceManager.load_image_with_fallback("151_Mew.png") 
+	player.texture = ResourceManager.load_image_with_fallback("155_Cyndaquil.png") 
 
 	_init_board() # 載入或生成地圖資料
 	_draw_board_cells()
