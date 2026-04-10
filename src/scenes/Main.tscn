@@ -6,6 +6,8 @@
 [ext_resource type="Script" uid="uid://c53pioktd7lqq" path="res://scripts/Player.gd" id="player_script"]
 [ext_resource type="Script" uid="uid://dwiln21r8f80c" path="res://scripts/MapPreviewer.gd" id="previewer_script"]
 
+[ext_resource type="Script" uid="uid://c83p1oktd7lqr" path="res://scripts/UIManager.gd" id="ui_manager_script"]
+
 [node name="Main" type="Node2D" unique_id=995981613]
 script = ExtResource("1_main")
 current_board = ExtResource("2_0bbpv")
@@ -25,6 +27,7 @@ script = ExtResource("player_script")
 position = Vector2(576, 324)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1549242096]
+script = ExtResource("ui_manager_script")
 
 [node name="InfoLabel" type="Label" parent="UI" unique_id=1263469882]
 offset_left = 20.0
@@ -35,8 +38,63 @@ theme_override_font_sizes/font_size = 24
 text = "按空白鍵 (Space) 擲骰子移動"
 
 [node name="DebugToggleButton" type="Button" parent="UI" unique_id=128380878]
-offset_left = 980.0
-offset_top = 20.0
-offset_right = 1130.0
-offset_bottom = 60.0
+offset_left = 20.0
+offset_top = 70.0
+offset_right = 170.0
+offset_bottom = 110.0
 text = "Toggle Debug (ESC)"
+
+[node name="SideMenuContainer" type="PanelContainer" parent="UI" unique_id=2000000001]
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -140.0
+offset_top = 100.0
+offset_right = -20.0
+offset_bottom = -100.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/SideMenuContainer" unique_id=2000000007]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/SideMenuContainer/MarginContainer" unique_id=2000000002]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="SettingsBtn" type="Button" parent="UI/SideMenuContainer/MarginContainer/VBoxContainer" unique_id=2000000003]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
+text = "設定"
+
+[node name="StatusBtn" type="Button" parent="UI/SideMenuContainer/MarginContainer/VBoxContainer" unique_id=2000000004]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
+text = "狀態"
+
+[node name="InventoryBtn" type="Button" parent="UI/SideMenuContainer/MarginContainer/VBoxContainer" unique_id=2000000005]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
+text = "背包"
+
+[node name="MapBtn" type="Button" parent="UI/SideMenuContainer/MarginContainer/VBoxContainer" unique_id=2000000006]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
+text = "地圖"
