@@ -16,12 +16,18 @@ func _ready() -> void:
 	if inventory_btn: inventory_btn.pressed.connect(_on_inventory_pressed)
 	if map_btn: map_btn.pressed.connect(_on_map_pressed)
 
+const STATUS_UI_SCENE = preload("res://scenes/ui/StatusUI.tscn")
+
 # --- 按鈕事件處理 ---
 func _on_settings_pressed() -> void:
 	DebugLogger.log_msg("⚙️ 開啟設定選單 (尚未實作)", true)
 
 func _on_status_pressed() -> void:
-	DebugLogger.log_msg("📊 開啟玩家狀態 (尚未實作)", true)
+	DebugLogger.log_msg("📊 開啟玩家狀態視窗", true)
+	var status_ui = STATUS_UI_SCENE.instantiate() as StatusUI
+	add_child(status_ui)
+	# 預設開啟自己的狀態 (假設玩家 ID 是 0)
+	status_ui.setup(0)
 
 func _on_inventory_pressed() -> void:
 	DebugLogger.log_msg("🎒 開啟背包 (尚未實作)", true)

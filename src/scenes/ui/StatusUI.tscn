@@ -1,0 +1,189 @@
+[gd_scene format=3 uid="uid://b00g0w8x5q7s3"]
+
+[ext_resource type="Script" uid="uid://df8qxt2y9p1k5" path="res://scripts/StatusUI.gd" id="1_status_ui"]
+
+[node name="StatusUI" type="CanvasLayer"]
+script = ExtResource("1_status_ui")
+
+[node name="BlackScreen" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainPanel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(800, 500)
+layout_mode = 2
+
+[node name="Background" type="ColorRect" parent="CenterContainer/MainPanel"]
+layout_mode = 2
+color = Color(0.12, 0.12, 0.15, 1)
+
+[node name="Border" type="ReferenceRect" parent="CenterContainer/MainPanel"]
+layout_mode = 2
+border_color = Color(0.4, 0.4, 0.5, 1)
+border_width = 3.0
+editor_only = false
+
+[node name="Margin" type="MarginContainer" parent="CenterContainer/MainPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/MainPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Header" type="HBoxContainer" parent="CenterContainer/MainPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CenterContainer/MainPanel/Margin/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 28
+text = "玩家狀態與財力"
+
+[node name="CloseBtn" type="Button" parent="CenterContainer/MainPanel/Margin/VBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+text = "X"
+
+[node name="PlayerTabs" type="TabBar" parent="CenterContainer/MainPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tab_count = 3
+tab_0/title = "玩家 1 (你)"
+tab_1/title = "電腦 A"
+tab_2/title = "電腦 B"
+
+[node name="HSplit" type="HBoxContainer" parent="CenterContainer/MainPanel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 30
+
+[node name="LeftPanel" type="VBoxContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="FinanceSection" type="VBoxContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SectionTitle" type="Label" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel/FinanceSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.2, 1)
+theme_override_font_sizes/font_size = 20
+text = "【 核心財力 】"
+
+[node name="CashLabel" type="Label" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel/FinanceSection"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "現金: $2000"
+
+[node name="DepositLabel" type="Label" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel/FinanceSection"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "存款: $500" 
+
+[node name="NetWorthLabel" type="Label" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel/FinanceSection"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "總資產: $5000"
+
+[node name="PointsLabel" type="Label" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel/FinanceSection"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "點數: 150 P"
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel"]
+layout_mode = 2
+
+[node name="BuffSection" type="VBoxContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SectionTitle" type="Label" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel/BuffSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 20
+text = "【 狀態與影響 】"
+
+[node name="BuffContainer" type="VBoxContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/LeftPanel/BuffSection"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RightPanel" type="VBoxContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="InfoTabs" type="TabContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/RightPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="地產列表" type="ScrollContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/RightPanel/InfoTabs"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+metadata/_tab_index = 0
+
+[node name="Margin" type="MarginContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/RightPanel/InfoTabs/地產列表"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="PropertyList" type="Tree" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/RightPanel/InfoTabs/地產列表/Margin"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 4
+column_titles_visible = true
+hide_root = true
+
+[node name="持有道具" type="ScrollContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/RightPanel/InfoTabs"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="Margin" type="MarginContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/RightPanel/InfoTabs/持有道具"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ItemList" type="GridContainer" parent="CenterContainer/MainPanel/Margin/VBox/HSplit/RightPanel/InfoTabs/持有道具/Margin"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 4
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
