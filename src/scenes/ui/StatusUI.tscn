@@ -54,11 +54,18 @@ size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 28
 text = "玩家狀態與財力"
 
+[node name="AvatarRect" type="TextureRect" parent="CenterContainer/MainPanel/Margin/VBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
 [node name="CloseBtn" type="Button" parent="CenterContainer/MainPanel/Margin/VBox/Header"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
-text = "X"
+text = "X" 
 
 [node name="PlayerTabs" type="TabBar" parent="CenterContainer/MainPanel/Margin/VBox"]
 unique_name_in_owner = true

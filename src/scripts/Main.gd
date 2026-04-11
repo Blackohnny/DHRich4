@@ -135,6 +135,40 @@ func _draw_board_cells() -> void:
 		cell.add_child(label)
 
 # --- 作弊與除錯 API ---
+func force_set_player_count(count: int) -> void:
+	if current_state != GameState.WAITING_ROLL:
+		DebugLogger.log_msg("[WARNING] 必須在等待擲骰時才能更改遊戲人數！")
+		return
+		
+	var pm = get_node_or_null("/root/PlayerManager")
+	if pm == null:
+		DebugLogger.log_msg("[ERROR] PlayerManager 未啟動，無法設定玩家數量！")
+		return
+		
+	DebugLogger.log_msg("⚠️ 作弊：強制將遊戲人數重置為 %d 人！" % count, true)
+	
+	# 重置 PlayerManager 裡的玩家資料
+	pm.players.clear()
+	pm.current_turn_index = 0
+	
+	var default_avatars = [
+		"155_Cyndaquil.png",
+		"138_Omanyte.png",
+		"376_Metagross.png",
+		"151_Mew.png"
+	]
+	
+	for i in range(count):
+		var is_bot = (i > 0) # 第 0 個是真人，其他是電腦
+		var p_name = "玩家 1 (你)" if i == 0 else "電腦 %d" % i
+		var p_data = PlayerData.new(i, p_name, default_avatars[i % default_avatars.size()], is_bot)
+		pm.players.append(p_data)
+		
+	# 由於目前地圖上只有一個寫死的 $Player，為了不讓它壞掉，我們先重置它的狀態
+	player.setup(0, current_board)
+	
+	DebugLogger.log_msg("遊戲人數已重置。切換狀態 UI 即可看到變化。")
+
 func force_move(steps: int) -> void:
 	if current_state == GameState.WAITING_ROLL:
 		current_state = GameState.MOVING

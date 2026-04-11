@@ -121,13 +121,29 @@ func _create_debug_window() -> void:
 		empty_btn.text = " 預留 "
 		ai_tools_hbox.add_child(empty_btn)
 
-	# 6. 將視窗加入到目前的 Scene Tree 中
+	# 6. 建立玩家人數切換按鈕區 (HBoxContainer)
+	var player_count_hbox = HBoxContainer.new()
+	main_vbox.add_child(player_count_hbox)
+	
+	for i in range(1, 5):
+		var btn = Button.new()
+		btn.text = " %d人遊戲 " % i
+		btn.pressed.connect(_on_cheat_set_players.bind(i))
+		player_count_hbox.add_child(btn)
+
+	# 7. 將視窗加入到目前的 Scene Tree 中
 	call_deferred("add_child", debug_window)
 	log_msg("Debug Console Initialized. Log file saved at: " + ProjectSettings.globalize_path(LOG_FILE_PATH))
 
 # ---------------------------------------------------------
 # 作弊按鈕事件處理 (Cheat Button Handlers)
 # ---------------------------------------------------------
+
+func _on_cheat_set_players(count: int) -> void:
+	if main_controller != null and main_controller.has_method("force_set_player_count"):
+		main_controller.force_set_player_count(count)
+	else:
+		log_msg("[ERROR] Main Controller 未註冊或不支援 force_set_player_count！")
 
 func _on_cheat_move_pressed(steps: int) -> void:
 	if main_controller != null and main_controller.has_method("force_move"):

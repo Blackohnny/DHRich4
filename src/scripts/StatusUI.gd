@@ -4,6 +4,7 @@ class_name StatusUI
 # --- UI 元件參考 ---
 @onready var close_btn: Button = %CloseBtn
 @onready var player_tabs: TabBar = %PlayerTabs
+@onready var avatar_rect: TextureRect = %AvatarRect # 右上角大頭像
 
 # 左側：財力區
 @onready var cash_label: Label = %CashLabel
@@ -29,6 +30,9 @@ func _ready() -> void:
 	# 綁定玩家切換分頁
 	if player_tabs: player_tabs.tab_clicked.connect(_on_player_tab_clicked)
 	
+	# 初始化分頁名稱 (根據 PlayerManager 資料)
+	_setup_tabs()
+	
 	# 設定 Tree (地產表格) 的標題
 	property_list.set_column_title(0, "名稱")
 	property_list.set_column_title(1, "等級")
@@ -40,9 +44,6 @@ func _ready() -> void:
 	property_list.set_column_expand_ratio(1, 1)
 	property_list.set_column_expand_ratio(2, 1)
 	property_list.set_column_expand_ratio(3, 1)
-	
-	# 初始化資料
-	_refresh_ui_for_player(0)
 
 func setup(initial_player_id: int) -> void:
 	current_viewing_player_id = initial_player_id
@@ -54,23 +55,50 @@ func _on_close_pressed() -> void:
 	queue_free()
 
 func _on_player_tab_clicked(tab: int) -> void:
+	# 這裡的 tab index 剛好對應我們測試用的 player_id (0, 1, 2)
 	_refresh_ui_for_player(tab)
 
+func _setup_tabs() -> void:
+	if not player_tabs: return
+	player_tabs.clear_tabs()
+	
+	# 防呆：如果沒有抓到 PlayerManager，可能引擎還沒重新啟動
+	var pm = get_node_or_null("/root/PlayerManager")
+	if pm == null:
+		player_tabs.add_tab("玩家 1 (你)")
+		return
+		
+	var players = pm.get_all_players()
+	for p in players:
+		player_tabs.add_tab(p.name)
+
 func _refresh_ui_for_player(player_id: int) -> void:
+	# 防呆抓取資料
+	var pm = get_node_or_null("/root/PlayerManager")
+	if pm == null: return
+	
+	var target_player: PlayerData = pm.get_player(player_id)
+	if target_player == null: return
+	
+	# 刷新大頭貼
+	if avatar_rect and target_player.avatar_filename != "":
+		avatar_rect.texture = ResourceManager.load_image_with_fallback(target_player.avatar_filename)
+	
+	# --- 資訊遮蔽邏輯 ---
 	var is_me = (player_id == 0) # 假設 0 是本機玩家
 	var can_see_all = is_me # 資訊遮蔽權限
 	
 	# 1. 刷新財力
 	if can_see_all:
-		cash_label.text = "現金: $2000"
-		deposit_label.text = "存款: $500"
-		net_worth_label.text = "總資產: $5000"
-		points_label.text = "點數: 150 P"
+		cash_label.text = "現金: $%d" % target_player.cash
+		deposit_label.text = "存款: $%d" % target_player.deposit
+		points_label.text = "點數: %d P" % target_player.points
 	else:
 		cash_label.text = "現金: ???"
 		deposit_label.text = "存款: ???"
-		net_worth_label.text = "總資產: 估計約 $4500"
 		points_label.text = "點數: ???"
+		
+	net_worth_label.text = "總資產: 估計約 $%d" % (target_player.cash + target_player.deposit + 2500) # 假設
 		
 	# 2. 刷新地產表格 (Tree)
 	property_list.clear()
