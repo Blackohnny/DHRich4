@@ -16,7 +16,19 @@ This is an AI-driven, single-player Monopoly-style game side project that integr
 
 *   **Game Engine**: [Godot Engine 4.6.1](https://godotengine.org/) (Standard version, GDScript)
 *   **Language**: GDScript (with strict static typing conventions)
-*   **Architecture**: MVC (Model-View-Controller) and robust State Machine implementations.
+*   **Architecture (MVC & Component Composition)**:
+    *   **Model (Data Layer)**:
+        *   `PlayerManager.gd` (AutoLoad): Manages the global array of active players.
+        *   `PlayerData.gd`: Encapsulates individual player assets, providing a DTO via `get_public_view()` to enforce True Fog of War and prevent AI cheating.
+        *   `BoardData.tres` / `CellData.gd`: Stores map topology, cell types, and global economic settings.
+    *   **View (Presentation Layer)**:
+        *   `Main.tscn`: The host environment scene containing the camera, board background, and primary UI canvas.
+        *   `PlayerEntity.tscn`: An independent pawn prefab, dynamically instantiated with assigned avatars.
+        *   `StatusUI.tscn`: A modal window prefab utilizing Tree and Grid containers for player status, properties, and items.
+    *   **Controller (Logic Layer)**:
+        *   `Main.gd`: Houses the central State Machine, managing turn cycles, dice roll scheduling, and acting as the Event Dispatcher for cell landings.
+        *   `UIManager.gd`: Handles primary screen clicks and dynamically instantiates UI popups like `StatusUI`.
+        *   `Player.gd`: Attached to `PlayerEntity.tscn`, focused solely on position tweening and Z-Index highlighting.
 *   **Resource Management (Data-Driven)**: 
     *   Custom dynamic loading and Fallback mechanisms strictly isolate private (copyrighted) assets from open-source assets.
     *   **Data-Driven Board System**: Hardcoded generation is abandoned in favor of Godot Custom Resources (`.tres`). Maps are implemented as Directed Graphs to support figure-8 layouts and branching paths.

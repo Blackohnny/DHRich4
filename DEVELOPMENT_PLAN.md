@@ -59,6 +59,13 @@
     2. 尋找開發目錄 `res://ai_config.json`。
     3. 若皆不存在，或參數設定異常，遊戲不會崩潰，而是觸發**優雅降級 (Graceful Degradation)**，將機會/命運格切換為傳統隨機抽卡模式。
 
+### 6. 多玩家 MVC 架構與資訊遮蔽 (Multi-player MVC & Fog of War)
+*   **決策**: 將玩家系統徹底解耦為 Model (`PlayerData`), View (`PlayerEntity.tscn` / `StatusUI.tscn`), 與 Controller (`PlayerManager` / `Main.gd`)，並在資料層實作資訊遮蔽。
+*   **原因**:
+    *   **解決寫死節點的痛點**: 原本主場景僅能支援單一 `$Player` 棋子，重構為動態 `instantiate()` 以支援任意數量玩家與回合輪替 (`advance_turn`)。
+    *   **事件驅動 UI**: UI 組件 (`StatusUI`) 不再寫死資料，而是透過 `@onready` 搭配 Unique Name (`%`) 獲取節點參考，並在 `_ready` 透過 Signal (`pressed.connect`) 註冊事件監聽，與控制器互動。
+    *   **防堵 AI 作弊 (True Fog of War)**: 若在 UI 層寫死隱藏邏輯，未來的 AI 仍可讀取對手底層參數。故將 `PlayerData` 的資產設為私有 (`_cash`)，並對外提供 `get_public_view(viewer_id)` 視圖 API (DTO 模式)。任何人 (含 AI) 呼叫皆會依照權限回傳精確或模糊化資料。
+
 ---
 
 ## 🛠️ 階段開發藍圖 (Step-by-Step Roadmap)
@@ -87,10 +94,11 @@
     *   在 `Main.gd` 實作 Event Dispatcher，透過 `is` 關鍵字路由不同事件。
     *   實作基本的扣款、買地、路過起點領薪水等邏輯。
 
-### Phase 3: GUI 與市場物價系統 (GUI & Dynamic Market)
-*   [ ] **3.1 遊戲主介面**: 使用 `CanvasLayer` 與 `Control` 節點 (Panel, Label) 顯示玩家當前金錢、骰子點數、回合數。
-*   [ ] **3.2 商店面板**: 實作簡單的列表顯示可購買道具 (如：遙控骰子)。
-*   [ ] **3.3 動態物價演算法**:
+### Phase 3: GUI 與市場物價系統 (GUI & Dynamic Market) [🚧 進行中]
+*   [x] **3.1 遊戲主介面**: 實作 `UIManager` 與側邊欄選單 (Settings, Status, Inventory, Map)。
+*   [x] **3.2 玩家狀態視窗 (StatusUI)**: 實作獨立的模態視窗，包含資訊遮蔽 (Fog of War) 與動態載入的 Tree/Grid 佈局，可切換查看所有玩家狀態。
+*   [ ] **3.3 商店面板**: 實作簡單的列表顯示可購買道具 (如：遙控骰子)。
+*   [ ] **3.4 動態物價演算法**:
     *   實作 `MarketManager.gd`。
     *   每次購買道具，該道具「熱度值」+1，價格上漲 (例如 +10%)。
     *   每回合結束若無人購買，熱度值衰減，價格回落。

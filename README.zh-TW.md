@@ -17,8 +17,20 @@
 
 *   **遊戲引擎**: [Godot Engine 4.6.1](https://godotengine.org/) (Standard version, GDScript)
 *   **開發語言**: GDScript (具備強型別宣告)
-*   **架構設計**: MVC (Model-View-Controller) 與 State Machine (狀態機)
-*   **資源管理 (Data-Driven)**: 
+*   **架構設計 (Architecture)**: 採用嚴格的 MVC 與動態實例化 (Instantiation) 模式。
+    *   **Model (資料層)**: 
+        *   `PlayerManager.gd` (AutoLoad): 管理全域玩家陣列。
+        *   `PlayerData.gd`: 封裝單一玩家的資產與狀態，透過 `get_public_view()` 提供具備資訊遮蔽 (Fog of War) 權限判斷的 DTO (Data Transfer Object)。
+        *   `BoardData.tres` / `CellData.gd`: 儲存地圖拓樸結構與全域經濟環境參數。
+    *   **View (視圖層)**:
+        *   `Main.tscn`: 遊戲主容器 (Host Scene)，包含攝影機、棋盤底圖、與 UI 畫布層。
+        *   `PlayerEntity.tscn`: 獨立的棋子預製件，由 Controller 動態生成並載入頭像。
+        *   `StatusUI.tscn`: 模態視窗預製件，包含玩家狀態、道具與地產的表格/網格排版。
+    *   **Controller (邏輯層)**:
+        *   `Main.gd`: 遊戲的主狀態機 (State Machine)，控制回合輪替、骰子動畫排程，並作為地圖事件的分發器 (Event Dispatcher)。
+        *   `UIManager.gd`: 負責接收主畫面點擊事件，並負責動態實例化 (Instantiate) `StatusUI` 彈出視窗。
+        *   `Player.gd`: 掛載於 `PlayerEntity`，專職處理座標平移 (Tween) 與 Z-Index 視覺突顯。
+*   **資源管理**: 
     *   實作動態載入與 Fallback 機制，隔離私有資源與開源資源。
     *   **地圖系統完全資料驅動**：捨棄硬編碼，使用 Godot Custom Resources (`.tres`) 建立有向圖 (Directed Graph) 地圖結構，支援 8 字形與岔路走訪。
 
