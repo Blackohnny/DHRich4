@@ -8,16 +8,24 @@ enum GameState {
 	EVENT_HANDLING # 處理格子事件 (買地/付錢/機會命運)
 }
 
-# 變數宣告 (使用強型別以符合 C++ 習慣)
+const PLAYER_SCENE = preload("res://scenes/PlayerEntity.tscn")
+
+# 變數宣告
 var current_state: GameState = GameState.WAITING_ROLL
 var remaining_steps: int = 0
+
+# 目前畫面上所有棋子的陣列 (Index 對應 player_id)
+var player_entities: Array[PlayerEntity] = []
+
+# 目前正在行動的棋子 (快取)
+var active_player_entity: PlayerEntity
 
 # 【架構重構】：使用外部的 BoardData 資源
 @export var current_board: BoardData
 
 # 取得場景上的節點參考
-@onready var player: PlayerEntity = $Player as PlayerEntity
 @onready var board_node: Node2D = $Board
+@onready var players_node: Node2D = $Board/Players
 @onready var info_label: Label = $UI/InfoLabel
 @onready var debug_toggle_btn: Button = $UI/DebugToggleButton
 
@@ -27,7 +35,6 @@ var cell_texture: Texture2D
 func _ready() -> void:
 	# 在 _ready 階段動態載入圖片
 	cell_texture = ResourceManager.load_image_with_fallback("151_Mew.png") 
-	player.texture = ResourceManager.load_image_with_fallback("155_Cyndaquil.png") 
 
 	_init_board() # 載入或生成地圖資料
 	_draw_board_cells()
@@ -40,22 +47,68 @@ func _ready() -> void:
 	# 綁定實體按鈕
 	debug_toggle_btn.pressed.connect(func(): DebugLogger.toggle_window(not DebugLogger.is_enabled))
 
-	# 遊戲開始，初始化玩家
+	# 遊戲開始，初始化所有玩家棋子
 	if current_board and current_board.cells.size() > 0:
-		player.setup(0, current_board)
-
-	# 初始化狀態提示
-	DebugLogger.log_msg("遊戲開始！按空白鍵 (Space) 擲骰子。", true)
+		_spawn_players()
 
 func _process(_delta: float) -> void:
-	# 按下 ESC 鍵來開關 Debug 視窗 (Godot 預設 ui_cancel 就是 ESC)
+	# 按下 ESC 鍵來開關 Debug 視窗
 	if Input.is_action_just_pressed("ui_cancel"):
 		DebugLogger.toggle_window(not DebugLogger.is_enabled)
 
 	# 狀態機：只有在 WAITING_ROLL 狀態才能擲骰子
 	if current_state == GameState.WAITING_ROLL:
-		if Input.is_action_just_pressed("ui_accept"):
-			_roll_dice_and_move()
+		# TODO: 判斷現在是不是真人玩家的回合
+		var current_data = PlayerManager.get_current_turn_player()
+		if current_data != null and not current_data.is_ai:
+			if Input.is_action_just_pressed("ui_accept"):
+				_roll_dice_and_move()
+
+# --- 動態生成玩家棋子 ---
+func _spawn_players() -> void:
+	# 清空舊棋子
+	for child in players_node.get_children():
+		child.queue_free()
+	player_entities.clear()
+	
+	var pm = get_node_or_null("/root/PlayerManager")
+	if pm == null: return
+	
+	var players_data = pm.get_all_players()
+	for data in players_data:
+		var entity = PLAYER_SCENE.instantiate() as PlayerEntity
+		players_node.add_child(entity)
+		# 將棋子放在起點 (index 0)
+		entity.setup(data.id, 0, current_board, data.avatar_filename)
+		player_entities.append(entity)
+		
+	# 啟動第一回合
+	_start_turn()
+
+# --- 回合控制 ---
+func _start_turn() -> void:
+	var pm = get_node_or_null("/root/PlayerManager")
+	if pm == null: return
+	
+	var current_data = pm.get_current_turn_player()
+	
+	# 更新 active_player_entity 快取
+	active_player_entity = player_entities[current_data.id]
+	
+	# 【細節】：把輪到的棋子拉到最上層，其他棋子降下去
+	for entity in player_entities:
+		entity.set_active_turn(entity == active_player_entity)
+		
+	current_state = GameState.WAITING_ROLL
+	DebugLogger.log_msg("=== 輪到 [%s] 的回合 ===" % current_data.name, true)
+	
+	# 如果是 AI，自動假裝思考後擲骰
+	if current_data.is_ai:
+		DebugLogger.log_msg("電腦思考中...")
+		await get_tree().create_timer(1.0).timeout
+		_roll_dice_and_move()
+	else:
+		DebugLogger.log_msg("請按空白鍵 (Space) 擲骰子。")
 
 # 1. 初始化地圖資料 (如果是從編輯器掛載進來的，就不需要產生)
 func _init_board() -> void:
@@ -159,15 +212,18 @@ func force_set_player_count(count: int) -> void:
 	]
 	
 	for i in range(count):
-		var is_bot = (i > 0) # 第 0 個是真人，其他是電腦
-		var p_name = "玩家 1 (你)" if i == 0 else "電腦 %d" % i
+		var is_bot = (i > 1) # 前 2 個是真人，其他是電腦
+		var p_name = "玩家 %d" % (i + 1) if not is_bot else "電腦 %d" % (i - 1)
+		# 特別幫玩家 1 加上 (你)
+		if i == 0: p_name = "玩家 1 (你)"
+			
 		var p_data = PlayerData.new(i, p_name, default_avatars[i % default_avatars.size()], is_bot)
 		pm.players.append(p_data)
 		
-	# 由於目前地圖上只有一個寫死的 $Player，為了不讓它壞掉，我們先重置它的狀態
-	player.setup(0, current_board)
+	# 清空並根據新的玩家人數動態生成棋子
+	_spawn_players()
 	
-	DebugLogger.log_msg("遊戲人數已重置。切換狀態 UI 即可看到變化。")
+	DebugLogger.log_msg("遊戲人數已重置為 %d 人。切換狀態 UI 即可看到變化。" % count)
 
 func force_move(steps: int) -> void:
 	if current_state == GameState.WAITING_ROLL:
@@ -197,7 +253,7 @@ func _process_next_step() -> void:
 		_on_movement_completed()
 		return
 
-	var current_index: int = player.current_cell_index
+	var current_index: int = active_player_entity.current_cell_index
 	var current_cell: CellData = current_board.cells[current_index]
 	var next_nodes: Array = current_cell.next_nodes # 放寬為無型別陣列，避免 Godot 序列化型別錯誤
 
@@ -210,7 +266,7 @@ func _process_next_step() -> void:
 	var valid_next_nodes: Array[int] = []
 	for node_index in next_nodes:
 		var target_node_int = int(node_index) # 強制轉為整數
-		if target_node_int != player.previous_cell_index:
+		if target_node_int != active_player_entity.previous_cell_index:
 			valid_next_nodes.append(target_node_int)
 
 	if valid_next_nodes.is_empty():
@@ -233,8 +289,8 @@ func _process_next_step() -> void:
 	remaining_steps -= 1
 
 	# 呼叫 PlayerEntity 執行單步移動，並等待動畫完成 Signal
-	player.move_one_step(target_index, current_board)
-	await player.step_finished
+	active_player_entity.move_one_step(target_index, current_board)
+	await active_player_entity.step_finished
 
 	# 動畫走完一格後，檢查路過事件 (Passing Event)
 	_handle_passing_event(target_index)
@@ -251,7 +307,7 @@ func _handle_passing_event(cell_index: int) -> void:
 
 func _on_movement_completed() -> void:
 	current_state = GameState.EVENT_HANDLING 
-	_handle_cell_event(player.current_cell_index)
+	_handle_cell_event(active_player_entity.current_cell_index)
 
 # 5. 處理格子事件 (落地事件：買地、機會命運等邏輯的進入點)
 func _handle_cell_event(cell_index: int) -> void:
@@ -286,34 +342,36 @@ func _handle_cell_event(cell_index: int) -> void:
 # ---------------------------------------------------------
 
 func _passing_start_event(cell: CellData) -> void:
+	var current_data = PlayerManager.get_current_turn_player()
 	if cell is StartCellData:
 		var start_cell = cell as StartCellData
-		DebugLogger.log_msg("路過起點，領取薪水 $%d！" % start_cell.salary_amount)
-		player.add_money(start_cell.salary_amount)
+		current_data.add_cash(start_cell.salary_amount)
 	else:
-		DebugLogger.log_msg("路過起點，領取薪水 $2000！(預設)")
-		player.add_money(2000)
+		current_data.add_cash(2000)
 
 func _landing_start_event(_cell: CellData) -> void:
 	DebugLogger.log_msg("停在起點上。休息一回合。", true)
 	_end_turn()
 
 func _landing_land_event(cell: CellData) -> void:
+	var current_data = PlayerManager.get_current_turn_player()
+	
 	if cell is LandCellData:
 		var land = cell as LandCellData
 		if land.owner_id == -1:
 			# 無主地，處理購買邏輯 (先用 Auto-buy 測試)
 			DebugLogger.log_msg("踩到無主地 [%s]，售價 $%d，自動購買測試..." % [land.name, land.price])
-			if player.deduct_money(land.price):
-				land.owner_id = player.player_id
-				DebugLogger.log_msg("購買成功！[%s] 擁有者變為玩家 %d" % [land.name, player.player_id])
+			if current_data.deduct_cash(land.price):
+				land.owner_id = current_data.id
+				DebugLogger.log_msg("購買成功！[%s] 擁有者變為玩家 %d" % [land.name, current_data.id])
 			else:
 				DebugLogger.log_msg("錢不夠，無法購買 [%s]！" % land.name)
-		elif land.owner_id != player.player_id:
+		elif land.owner_id != current_data.id:
 			# 別人的地，處理付過路費邏輯
+			var owner_data = PlayerManager.get_player(land.owner_id)
 			DebugLogger.log_msg("踩到別人的地 [%s]，需支付過路費 $%d！" % [land.name, land.base_toll])
-			player.deduct_money(land.base_toll)
-			# 未來: 將錢加給 owner
+			if current_data.deduct_cash(land.base_toll) and owner_data != null:
+				owner_data.add_cash(land.base_toll)
 		else:
 			# 自己的地
 			DebugLogger.log_msg("踩到自己的地 [%s]，歡迎回家！" % land.name)
@@ -345,6 +403,8 @@ func _landing_chance_event(cell: CellData) -> void:
 
 # 傳統抽卡模式 (免 AI)
 func _trigger_traditional_chance_event(chance: ChanceCellData) -> void:
+	var current_data = PlayerManager.get_current_turn_player()
+	
 	# 定義傳統的隨機事件庫 (未來可以抽出到獨立的 JSON)
 	var traditional_events = [
 		{"msg": "發票中獎！獲得 $500", "money": 500},
@@ -363,9 +423,9 @@ func _trigger_traditional_chance_event(chance: ChanceCellData) -> void:
 	
 	# 執行獎懲
 	if result.money > 0:
-		player.add_money(result.money)
+		current_data.add_cash(result.money)
 	elif result.money < 0:
-		player.deduct_money(-result.money)
+		current_data.deduct_cash(-result.money)
 
 func _landing_destiny_event(cell: CellData) -> void:
 	if cell is DestinyCellData:
@@ -396,5 +456,13 @@ func _landing_shop_event(cell: CellData) -> void:
 
 # 6. 回合結束，準備下一回合
 func _end_turn() -> void:
+	var pm = get_node_or_null("/root/PlayerManager")
+	if pm != null:
+		var next_player = pm.advance_turn()
+		if next_player != null:
+			_start_turn()
+			return
+			
+	# Fallback (防呆)
 	current_state = GameState.WAITING_ROLL
 	DebugLogger.log_msg("回合結束。請按空白鍵 (Space) 擲骰子。", true)

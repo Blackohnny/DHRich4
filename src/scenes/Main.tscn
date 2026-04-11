@@ -14,14 +14,13 @@ current_board = ExtResource("2_0bbpv")
 
 [node name="Board" type="Node2D" parent="." unique_id=2080499475]
 
+[node name="Players" type="Node2D" parent="Board" unique_id=2080499476]
+
 [node name="MapPreviewer" type="Node2D" parent="Board" unique_id=1943277442]
 script = ExtResource("previewer_script")
 board_data = ExtResource("2_0bbpv")
 
-[node name="Player" type="Sprite2D" parent="." unique_id=827680282]
-position = Vector2(0, -58)
-texture = ExtResource("2_icon")
-script = ExtResource("player_script")
+
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=536246566]
 position = Vector2(576, 324)

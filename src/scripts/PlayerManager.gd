@@ -12,7 +12,7 @@ func _ready() -> void:
 	# (暫時在此初始化三個測試玩家。未來此步驟應該由大廳/開局介面呼叫)
 	_setup_test_players()
 
-# 測試用：初始化本機玩家與兩位電腦對手
+# 測試用：初始化本機玩家與對手
 func _setup_test_players() -> void:
 	players.clear()
 	current_turn_index = 0
@@ -21,8 +21,8 @@ func _setup_test_players() -> void:
 	var p1 = PlayerData.new(0, "玩家 1 (你)", "155_Cyndaquil.png", false)
 	players.append(p1)
 	
-	# 電腦 A - 菊石獸
-	var p2 = PlayerData.new(1, "電腦 A", "138_Omanyte.png", true)
+	# 玩家 2 (本機控制) - 菊石獸
+	var p2 = PlayerData.new(1, "玩家 2", "138_Omanyte.png", false)
 	players.append(p2)
 	
 	# 電腦 B - 巨金怪

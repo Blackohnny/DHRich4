@@ -80,45 +80,50 @@ func _refresh_ui_for_player(player_id: int) -> void:
 	var target_player: PlayerData = pm.get_player(player_id)
 	if target_player == null: return
 	
-	# 刷新大頭貼
-	if avatar_rect and target_player.avatar_filename != "":
-		avatar_rect.texture = ResourceManager.load_image_with_fallback(target_player.avatar_filename)
+	# 【真正的資訊遮蔽】：UI 應該代表「打開這個視窗的真人玩家」的視角
+	# 目前在單機多人模式下，打開視窗的人就是「現在輪到回合的真人玩家」
+	var my_viewer_id = 0
+	var current_player = pm.get_current_turn_player()
+	if current_player != null and not current_player.is_ai:
+		my_viewer_id = current_player.id
+
+	var view = target_player.get_public_view(my_viewer_id)
+	var can_see_all = (view.cash != -1) # 透過回傳值判斷是否有權限看到明細
 	
-	# --- 資訊遮蔽邏輯 ---
-	var is_me = (player_id == 0) # 假設 0 是本機玩家
-	var can_see_all = is_me # 資訊遮蔽權限
+	# 刷新大頭貼
+	if avatar_rect and view.avatar != "":
+		avatar_rect.texture = ResourceManager.load_image_with_fallback(view.avatar)
 	
 	# 1. 刷新財力
 	if can_see_all:
-		cash_label.text = "現金: $%d" % target_player.cash
-		deposit_label.text = "存款: $%d" % target_player.deposit
-		points_label.text = "點數: %d P" % target_player.points
+		cash_label.text = "現金: $%d" % view.cash
+		deposit_label.text = "存款: $%d" % view.deposit
+		points_label.text = "點數: %d P" % view.points
 	else:
 		cash_label.text = "現金: ???"
 		deposit_label.text = "存款: ???"
 		points_label.text = "點數: ???"
 		
-	net_worth_label.text = "總資產: 估計約 $%d" % (target_player.cash + target_player.deposit + 2500) # 假設
+	net_worth_label.text = "總資產: 估計約 $%d" % view.net_worth
 		
 	# 2. 刷新地產表格 (Tree)
 	property_list.clear()
 	var root = property_list.create_item() # 隱藏的根節點
 	
 	if can_see_all:
-		_add_property_row(root, ["台北 101", "2", "$5000", "$1500"])
-		_add_property_row(root, ["高雄 85大樓", "1", "$2500", "$800"])
+		for prop_data in view.properties_detail:
+			_add_property_row(root, prop_data)
 	else:
-		_add_property_row(root, ["未知地產 x 3", "???", "???", "???"])
+		_add_property_row(root, ["未知地產 x %d" % view.properties_count, "???", "???", "???"])
 		
 	# 3. 刷新道具圖片 (GridContainer)
 	_clear_container(item_list)
 	if can_see_all:
-		_add_item_icon(item_list, "遙控骰子")
-		_add_item_icon(item_list, "烏龜卡")
-		_add_item_icon(item_list, "機車卡")
+		for item_name in view.items_detail:
+			_add_item_icon(item_list, item_name)
 	else:
 		var unknown_label = Label.new()
-		unknown_label.text = "未知道具/卡片 x 2"
+		unknown_label.text = "未知道具/卡片 x %d" % view.items_count
 		item_list.add_child(unknown_label)
 		
 	# 4. 刷新狀態
