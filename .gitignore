@@ -4,3 +4,10 @@
 
 # Ignore AI configuration file with real API keys
 ai_config.json
+
+toai.png
+# 忽略 Godot 產生的系統 log
+src/logs/godot*.log
+
+# 我們原本手動寫的遊戲事件 log
+src/logs/dhrich4_debug*.log

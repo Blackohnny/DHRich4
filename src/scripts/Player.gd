@@ -9,7 +9,18 @@ var current_cell_index: int = 0
 var previous_cell_index: int = -1
 
 # 移動動畫相關 (Animation)
-var move_speed: float = 0.25 # 走一格需要的秒數 (步進式)
+var _base_move_speed: float = 0.25 # 走一格需要的秒數 (步進式)
+
+# 根據全域設定取得實際移動速度
+func get_current_move_speed() -> float:
+	var settings = SettingsManager.current
+	match settings.display_move_speed:
+		GameSettings.MoveSpeed.FAST:
+			return 0.1
+		GameSettings.MoveSpeed.INSTANT:
+			return 0.01 # 給一個極小值避免動畫完全斷裂或除以零
+		GameSettings.MoveSpeed.NORMAL, _:
+			return _base_move_speed
 
 # 定義 Signal (MVC 解耦)
 signal step_finished # 走完一格觸發
@@ -70,7 +81,8 @@ func move_one_step(target_index: int, board: BoardData) -> void:
 	# 建立平移動畫 (Tween)
 	var tween: Tween = create_tween()
 	# 使用稍微快一點、線性的移動感來模擬「走步」
-	tween.tween_property(self, "position", target_pos, move_speed).set_trans(Tween.TRANS_LINEAR)
+	var current_speed = get_current_move_speed()
+	tween.tween_property(self, "position", target_pos, current_speed).set_trans(Tween.TRANS_LINEAR)
 	
 	# 動畫結束後更新狀態並發出 Signal
 	tween.finished.connect(func():

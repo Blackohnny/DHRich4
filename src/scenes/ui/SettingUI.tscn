@@ -1,0 +1,208 @@
+[gd_scene load_steps=4 format=3 uid="uid://c3x8g2f1n5b6v"]
+
+[ext_resource type="Script" uid="uid://test_uid" path="res://scripts/SettingUI.gd" id="1_setting"]
+[ext_resource type="PackedScene" uid="uid://b1m2n3q4w5e6r" path="res://scenes/ui/components/SegmentedSwitch.tscn" id="2_switch"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.121569, 0.121569, 0.141176, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5, 0.5, 0.5, 0.3)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 20
+
+[node name="SettingUI" type="CanvasLayer"]
+script = ExtResource("1_setting")
+
+[node name="DimBackground" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="WindowPanel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(900, 600)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/WindowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 32
+text = "遊戲設定"
+
+[node name="CloseBtn" type="Button" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+text = "關閉 [X]"
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Content" type="HBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TabMenu" type="VBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RulesTabBtn" type="Button" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabMenu"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "遊戲規則 (Rules)"
+
+[node name="DisplayTabBtn" type="Button" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabMenu"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "顯示 (Display)"
+
+[node name="AudioTabBtn" type="Button" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabMenu"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "音訊 (Audio)"
+
+[node name="AITabBtn" type="Button" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabMenu"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "AI 設定 (AI)"
+
+[node name="VSeparator" type="VSeparator" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="TabContents" type="MarginContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="RulesPanel" type="VBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="BacktrackRow" type="HBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel/BacktrackRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "允許原路折返"
+
+[node name="BacktrackSwitch" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel/BacktrackRow" instance=ExtResource("2_switch")]
+unique_name_in_owner = true
+layout_mode = 2
+left_text = "開啟"
+right_text = "關閉"
+
+[node name="BranchModeRow" type="HBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel/BranchModeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "岔路選擇方式"
+
+[node name="BranchModeSwitch" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel/BranchModeRow" instance=ExtResource("2_switch")]
+unique_name_in_owner = true
+layout_mode = 2
+left_text = "手動選擇"
+right_text = "系統隨機"
+
+[node name="DisplayPanel" type="VBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="MoveSpeedRow" type="HBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/DisplayPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/DisplayPanel/MoveSpeedRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "棋子移動速度"
+
+[node name="MoveSpeedOption" type="OptionButton" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/DisplayPanel/MoveSpeedRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "正常 (0.25s)"
+popup/item_0/id = 0
+popup/item_1/text = "快速 (0.1s)"
+popup/item_1/id = 1
+popup/item_2/text = "瞬間移動 (0s)"
+popup/item_2/id = 2
+
+[node name="AudioPanel" type="VBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/AudioPanel"]
+layout_mode = 2
+text = "音訊設定 (尚未實作)"
+
+[node name="AIPanel" type="VBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="AIToggleRow" type="HBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/AIPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/AIPanel/AIToggleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "啟用 AI 命運之神對話"
+
+[node name="AIToggleSwitch" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/AIPanel/AIToggleRow" instance=ExtResource("2_switch")]
+unique_name_in_owner = true
+layout_mode = 2
+left_text = "開啟"
+right_text = "關閉"

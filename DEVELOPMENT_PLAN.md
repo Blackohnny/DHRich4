@@ -129,3 +129,20 @@
 
 ---
 *文件建立日期: 2026-04-01*
+### 📝 備忘錄 (Notes & Future Todos)
+*   **遊戲起始設定 (Lobby Setup)**:
+    *   目前許多影響開局的變數 (如 `PlayerData.gd` 內的初始現金、初始存款) 皆寫死。
+    *   **未來實作**: 這些屬於「單局遊戲參數 (Match Parameters)」，在實作「主選單 (Main Menu)」或「開局大廳 (Lobby/Setup Room)」時，需建立對應的 UI 讓玩家選擇 (例如：初始資金 10,000 還是 20,000)，並在進入 `Main.tscn` 時傳入初始化。
+    *   **區別**: 這些只在開局生效的參數，**不應**放入可隨時動態切換的 `SettingUI` 中。
+
+### 7. 全域設定管理與單一資料來源 (Game Settings SSOT)
+*   **決策**: 建立 `GameSettings.gd` (Resource 模型) 集中定義所有遊戲內可變的偏好與規則 (如：移動速度、AI 參與度、允許回頭走)。並註冊 `SettingsManager` 作為 Autoload 提供全域存取。
+*   **原因**: 
+    *   主邏輯腳本 (`Main.gd`, `Player.gd`) 嚴禁寫死這些會被切換的偏好設定，確保邏輯只關注「執行」，規則交由「模型」決定。
+    *   達成「單一資料來源 (Single Source of Truth)」：當 `SettingUI` 更改設定時，所有讀取該值的系統能即時套用 (例如：移動動畫的 `Tween` 秒數)。
+
+### 8. UI 元件化封裝 (UI Componentization)
+*   **決策**: 針對專案特有、但 Godot 無原生對應的通用 UI 結構 (如：左右分段開關 `SegmentedSwitch`)，必須將其封裝為獨立的 Scene (`.tscn`) 與 Script (`.gd`)，存放於 `src/scenes/ui/components/`。
+*   **原因**: 
+    *   **DRY 原則 (Don't Repeat Yourself)**: 避免在不同的 UI 介面中重複手刻 `HBoxContainer` 與 `StyleBox` 排版，導致未來修改樣式時「牽一髮動全身」。
+    *   **高度重用**: 透過暴露 `@export` 變數 (如按鈕文字) 與自訂 Signal (`option_selected`)，讓其他開發者 (或 UI) 可以直接在 Inspector 中拖拉使用，無需撰寫額外排版邏輯。

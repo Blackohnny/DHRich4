@@ -2,11 +2,8 @@
 
 [ext_resource type="Script" uid="uid://dbtaf1tjhdesr" path="res://scripts/Main.gd" id="1_main"]
 [ext_resource type="Resource" uid="uid://br2ka27k3vjjd" path="res://data/map_default.tres" id="2_0bbpv"]
-[ext_resource type="Texture2D" uid="uid://27ogndy7knxs" path="res://assets/icon.svg" id="2_icon"]
-[ext_resource type="Script" uid="uid://c53pioktd7lqq" path="res://scripts/Player.gd" id="player_script"]
 [ext_resource type="Script" uid="uid://dwiln21r8f80c" path="res://scripts/MapPreviewer.gd" id="previewer_script"]
-
-[ext_resource type="Script" uid="uid://c83p1oktd7lqr" path="res://scripts/UIManager.gd" id="ui_manager_script"]
+[ext_resource type="Script" uid="uid://dox1uemuopgyu" path="res://scripts/UIManager.gd" id="ui_manager_script"]
 
 [node name="Main" type="Node2D" unique_id=995981613]
 script = ExtResource("1_main")
@@ -19,8 +16,6 @@ current_board = ExtResource("2_0bbpv")
 [node name="MapPreviewer" type="Node2D" parent="Board" unique_id=1943277442]
 script = ExtResource("previewer_script")
 board_data = ExtResource("2_0bbpv")
-
-
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=536246566]
 position = Vector2(576, 324)

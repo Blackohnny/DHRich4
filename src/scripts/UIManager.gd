@@ -17,6 +17,7 @@ func _ready() -> void:
 	if map_btn: map_btn.pressed.connect(_on_map_pressed)
 
 const STATUS_UI_SCENE = preload("res://scenes/ui/StatusUI.tscn")
+const SETTING_UI_SCENE = preload("res://scenes/ui/SettingUI.tscn")
 
 func _process(_delta: float) -> void:
 	_update_buttons_state()
@@ -43,8 +44,9 @@ func _update_buttons_state() -> void:
 
 # --- 按鈕事件處理 ---
 func _on_settings_pressed() -> void:
-	DebugLogger.log_msg("⚙️ 開啟設定選單 (尚未實作)", true)
-
+	DebugLogger.log_msg("⚙️ 開啟設定選單", true)
+	var setting_ui = SETTING_UI_SCENE.instantiate() as SettingUI
+	add_child(setting_ui)
 func _on_status_pressed() -> void:
 	DebugLogger.log_msg("📊 開啟玩家狀態視窗", true)
 	var status_ui = STATUS_UI_SCENE.instantiate() as StatusUI

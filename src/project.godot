@@ -17,10 +17,16 @@ config/icon="res://assets/icon.svg"
 
 [autoload]
 
+SettingsManager="*res://scripts/SettingsManager.gd"
 ResourceManager="*res://scripts/ResourceManager.gd"
 DebugLogger="*res://scripts/DebugLogger.gd"
 AIManager="*res://scripts/AIManager.gd"
 PlayerManager="*res://scripts/PlayerManager.gd"
+
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/log_path="res://logs/godot.log"
 
 [display]
 

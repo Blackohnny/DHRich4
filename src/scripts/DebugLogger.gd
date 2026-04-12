@@ -17,7 +17,7 @@ var main_controller: Node
 
 # 實體 Log 檔案變數
 var log_file: FileAccess
-const LOG_FILE_PATH: String = "res://dhrich4_debug.log"
+const LOG_FILE_PATH: String = "res://logs/dhrich4_debug.log"
 
 func _ready() -> void:
 	_init_log_file()
@@ -116,10 +116,16 @@ func _create_debug_window() -> void:
 	ai_tools_hbox.add_child(btn_test_ai)
 
 	# 預留空按鈕
-	for i in range(2):
+	for i in range(1):
 		var empty_btn = Button.new()
 		empty_btn.text = " 預留 "
 		ai_tools_hbox.add_child(empty_btn)
+		
+	# 加入印出全域設定按鈕
+	var btn_print_settings = Button.new()
+	btn_print_settings.text = " 列印全域設定 "
+	btn_print_settings.pressed.connect(_on_print_settings_pressed)
+	ai_tools_hbox.add_child(btn_print_settings)
 
 	# 6. 建立玩家人數切換按鈕區 (HBoxContainer)
 	var player_count_hbox = HBoxContainer.new()
@@ -164,7 +170,7 @@ func _on_test_ai_pressed() -> void:
 	if ai_manager == null or not ai_manager.has_method("is_ai_ready"):
 		log_msg("[ERROR] AIManager 未註冊！")
 		return
-		
+	
 	if not ai_manager.is_ai_ready():
 		log_msg("[ERROR] AI 未啟用，無法測試連線！請先讀取正確的設定檔。")
 		return
@@ -172,6 +178,16 @@ func _on_test_ai_pressed() -> void:
 	log_msg("📡 正在測試 AI API 連線至: " + ai_manager.api_endpoint)
 	ai_manager.test_connection()
 
+func _on_print_settings_pressed() -> void:
+	var settings = SettingsManager.current
+	log_msg("=== 遊戲全域設定 (GameSettings) ===")
+	log_msg("  [Rules] 允許原路折返 (allow_backtracking): " + str(settings.rule_allow_backtracking))
+	log_msg("  [Rules] 岔路選擇模式 (branch_selection_mode): " + str(settings.rule_branch_selection_mode) + " (0:手動, 1:隨機)")
+	log_msg("  [Display] 全螢幕 (fullscreen): " + str(settings.display_fullscreen))
+	log_msg("  [Display] 移動速度 (move_speed): " + str(settings.display_move_speed) + " (0:正常, 1:快速, 2:瞬間)")
+	log_msg("  [Audio] 主音量 (master_volume): " + str(settings.audio_master_volume))
+	log_msg("  [AI] 啟用 AI 對話 (ai_enabled): " + str(settings.ai_enabled))
+	log_msg("===============================")
 # ---------------------------------------------------------
 # 全域呼叫的印 Log 函式
 # ---------------------------------------------------------# update_ui: 如果為 true，這段文字會同時顯示在遊戲主畫面的提示框中
