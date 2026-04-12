@@ -262,41 +262,123 @@ func _process_next_step() -> void:
 		_on_movement_completed()
 		return
 
-	# 尋找有效的下一步 (避免回走)
+	# 1. 建立有效的下一步清單
 	var valid_next_nodes: Array[int] = []
 	for node_index in next_nodes:
 		var target_node_int = int(node_index) # 強制轉為整數
-		if target_node_int != active_player_entity.previous_cell_index:
+		
+		# 防呆：檢查地圖連線是否超出邊界
+		if target_node_int < 0 or target_node_int >= current_board.cells.size():
+			DebugLogger.log_msg("[ERROR] 地圖設定錯誤！節點 %d 嘗試連向不存在的格子 %d" % [current_index, target_node_int])
+			continue
+		
+		# 除非全域設定允許回走，否則過濾掉「剛走過來的路」
+		if SettingsManager.current.rule_allow_backtracking:
+			valid_next_nodes.append(target_node_int)
+		elif target_node_int != active_player_entity.previous_cell_index:
 			valid_next_nodes.append(target_node_int)
 
+	# 2. 死路特判 (Dead End Handling - 單向道盡頭)
+	# 如果過濾後沒路走，但原本是有連線的，代表這是醫院/監獄這類的死路盡頭
+	if valid_next_nodes.is_empty() and not next_nodes.is_empty():
+		DebugLogger.log_msg("⚠️ 遇到死巷 (單向道盡頭)，強制原路折返！", true)
+		# 把原本的路加回來 (原路折返)
+		for node_index in next_nodes:
+			valid_next_nodes.append(int(node_index))
+
 	if valid_next_nodes.is_empty():
-		# 這是死路 (Dead end)，大富翁裡不該發生，但如果是地圖設計錯誤會走到這
-		DebugLogger.log_msg("[WARNING] 走到死路，無法前進！第 %d 格" % current_index)
+		# 極端防呆 (不該發生)
 		_on_movement_completed()
 		return
 
+	# 3. 決定目標節點
 	var target_index: int = -1
 
 	if valid_next_nodes.size() == 1:
-		# 單行道，直接走
+		# 單行道或死巷折返，直接走
 		target_index = valid_next_nodes[0]
+		_execute_move_step(target_index)
 	else:
-		# 岔路處理 (目前先強制選第 0 條路，未來實作 WAITING_FORK)
-		DebugLogger.log_msg("⚠️ 遇到岔路！暫時自動選擇路線...")
-		target_index = valid_next_nodes[0]
+		# 遇到岔路
+		var current_data = PlayerManager.get_current_turn_player()
+		
+		if current_data.is_ai or SettingsManager.current.rule_branch_selection_mode == GameSettings.BranchSelectionMode.RANDOM:
+			# AI 或是 全域設定為隨機選擇
+			target_index = valid_next_nodes[randi() % valid_next_nodes.size()]
+			DebugLogger.log_msg("🎲 遇到岔路，系統隨機選擇了路線...")
+			_execute_move_step(target_index)
+		else:
+			# 真人玩家手動選擇
+			current_state = GameState.WAITING_FORK
+			_show_branch_selection_ui(valid_next_nodes)
 
+# 執行單步移動與動畫
+func _execute_move_step(target_index: int) -> void:
 	# 扣除步數
 	remaining_steps -= 1
 
-	# 呼叫 PlayerEntity 執行單步移動，並等待動畫完成 Signal
-	active_player_entity.move_one_step(target_index, current_board)
-	await active_player_entity.step_finished
+	# 呼叫 PlayerEntity 執行單步移動，並等待動畫徹底完成 (Async/Await)
+	await active_player_entity.move_one_step(target_index, current_board)
 
 	# 動畫走完一格後，檢查路過事件 (Passing Event)
 	_handle_passing_event(target_index)
 
-	# 繼續下一步
+	# 繼續下一步 (只有在當前的移動確實走完，才會啟動下一個遞迴)
 	_process_next_step()
+
+# --- 岔路 UI 邏輯 ---
+
+func _show_branch_selection_ui(valid_next_nodes: Array[int]) -> void:
+	DebugLogger.log_msg("⏸️ 遇到岔路，請點擊地圖上的按鈕選擇方向...", true)
+	
+	# 建立或取得存放岔路按鈕的容器 (放在 Board 節點下，跟隨世界座標)
+	var branch_container = board_node.get_node_or_null("BranchUIContainer")
+	if branch_container == null:
+		branch_container = Node2D.new()
+		branch_container.name = "BranchUIContainer"
+		board_node.add_child(branch_container)
+	
+	for target_idx in valid_next_nodes:
+		var target_cell = current_board.cells[target_idx]
+		
+		var btn = Button.new()
+		btn.text = "往此走\n[%s]" % target_cell.name
+		
+		# 設定按鈕樣式 (綠色半透明圓角背景)
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color(0.2, 0.7, 0.3, 0.9)
+		style.corner_radius_top_left = 8
+		style.corner_radius_top_right = 8
+		style.corner_radius_bottom_left = 8
+		style.corner_radius_bottom_right = 8
+		
+		# 設定 Hover 樣式 (更亮)
+		var hover_style = style.duplicate()
+		hover_style.bg_color = Color(0.3, 0.9, 0.4, 1.0)
+		
+		btn.add_theme_stylebox_override("normal", style)
+		btn.add_theme_stylebox_override("hover", hover_style)
+		btn.add_theme_font_size_override("font_size", 14)
+		
+		# 將按鈕放置於目標格子的中心偏上 (置中偏移)
+		btn.custom_minimum_size = Vector2(100, 40)
+		btn.position = target_cell.position - Vector2(50, 40)
+		
+		btn.pressed.connect(_on_branch_button_pressed.bind(target_idx))
+		branch_container.add_child(btn)
+
+func _on_branch_button_pressed(target_idx: int) -> void:
+	# 移除所有岔路按鈕
+	var branch_container = board_node.get_node_or_null("BranchUIContainer")
+	if branch_container != null:
+		for child in branch_container.get_children():
+			child.queue_free()
+			
+	DebugLogger.log_msg("玩家選擇了路線，繼續移動...")
+	
+	# 恢復移動狀態
+	current_state = GameState.MOVING
+	_execute_move_step(target_idx)
 
 func _handle_passing_event(cell_index: int) -> void:
 	var current_cell: CellData = current_board.cells[cell_index]

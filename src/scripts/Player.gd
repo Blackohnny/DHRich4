@@ -22,9 +22,7 @@ func get_current_move_speed() -> float:
 		GameSettings.MoveSpeed.NORMAL, _:
 			return _base_move_speed
 
-# 定義 Signal (MVC 解耦)
-signal step_finished # 走完一格觸發
-signal movement_completed # 整個移動流程結束觸發
+
 
 # ---------------------------------------------------------
 # 公開方法 (Public Methods)
@@ -66,26 +64,25 @@ func set_active_turn(is_active: bool) -> void:
 		z_index = 0
 		modulate = Color(1.0, 1.0, 1.0, 1.0)
 
-# 執行單步移動 (被 Main 控制器呼叫)
+# 執行單步移動 (非同步，被 Main 控制器呼叫並 await)
 func move_one_step(target_index: int, board: BoardData) -> void:
 	if board == null or target_index >= board.cells.size():
-		emit_signal("step_finished")
 		return
-		
+
 	var target_cell: CellData = board.cells[target_index]
 	var target_pos: Vector2 = target_cell.position
-	
+
 	# 記錄前一個位置 (防止回走)
 	previous_cell_index = current_cell_index
-	
+
 	# 建立平移動畫 (Tween)
 	var tween: Tween = create_tween()
 	# 使用稍微快一點、線性的移動感來模擬「走步」
 	var current_speed = get_current_move_speed()
 	tween.tween_property(self, "position", target_pos, current_speed).set_trans(Tween.TRANS_LINEAR)
-	
-	# 動畫結束後更新狀態並發出 Signal
-	tween.finished.connect(func():
-		current_cell_index = target_index
-		emit_signal("step_finished")
-	)
+
+	# 等待動畫徹底結束
+	await tween.finished
+
+	# 動畫結束後更新狀態
+	current_cell_index = target_index
