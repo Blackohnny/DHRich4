@@ -1,0 +1,87 @@
+{
+  "chance": [
+    {
+      "id": "c_s_01",
+      "title": "發票中獎",
+      "description": "對中本期發票號碼，獲得小確幸！",
+      "weight": 50,
+      "effects": [
+        { "cmd": "add_cash", "target": "self", "amount": 500 }
+      ]
+    },
+    {
+      "id": "c_s_02",
+      "title": "扶老奶奶過馬路",
+      "description": "熱心助人，路人打賞小費！",
+      "weight": 40,
+      "effects": [
+        { "cmd": "add_cash", "target": "self", "amount": 1000 }
+      ]
+    },
+    {
+      "id": "c_m_01",
+      "title": "獲得補助",
+      "description": "你申請的創業補助通過了！",
+      "weight": 20,
+      "effects": [
+        { "cmd": "add_cash", "target": "self", "amount": 5000 }
+      ]
+    },
+    {
+      "id": "c_m_item",
+      "title": "天降神兵",
+      "description": "你在路邊撿到了一個奇怪的遙控器...",
+      "weight": 10,
+      "effects": [
+        { "cmd": "add_item", "target": "self", "item_id": "item_remote_dice", "amount": 1 }
+      ]
+    },
+    {
+      "id": "c_l_01",
+      "title": "政府普發紅包",
+      "description": "經濟大好，市長宣布人人有獎！",
+      "weight": 5,
+      "effects": [
+        { "cmd": "add_cash", "target": "all", "amount": 3000 }
+      ]
+    }
+  ],
+  "destiny": [
+    {
+      "id": "d_s_01",
+      "title": "超速被開單",
+      "description": "趕時間超速，被警察攔了下來。",
+      "weight": 50,
+      "effects": [
+        { "cmd": "deduct_cash", "target": "self", "amount": 1200 }
+      ]
+    },
+    {
+      "id": "d_s_02",
+      "title": "遺失財物",
+      "description": "搭車時把錢包忘在車上。",
+      "weight": 40,
+      "effects": [
+        { "cmd": "deduct_cash", "target": "self", "amount": 2000 }
+      ]
+    },
+    {
+      "id": "d_m_01",
+      "title": "住院開刀",
+      "description": "你因為盲腸炎需要開刀，支付醫療費。",
+      "weight": 20,
+      "effects": [
+        { "cmd": "deduct_cash", "target": "self", "amount": 8000 }
+      ]
+    },
+    {
+      "id": "d_l_01",
+      "title": "金融海嘯",
+      "description": "經濟大蕭條，每位玩家資產縮水。",
+      "weight": 5,
+      "effects": [
+        { "cmd": "deduct_cash", "target": "all", "amount": 5000 }
+      ]
+    }
+  ]
+}

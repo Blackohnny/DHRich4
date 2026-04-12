@@ -45,10 +45,6 @@
 *   **原因**: 為了獲得「修改座標即可即時預覽」的開發者體驗 (DX)，需要用到 Godot 的 `@tool`。但若將主控制器 `Main.gd` 設為 `@tool`，其內部的 `_process` 與節點參照會在編輯器內瘋狂噴錯或干擾執行。
 *   **效益**: 確保遊戲主邏輯 (`Main.gd`) 乾淨安全，同時透過 `MapPreviewer.gd` 提供強大的所見即所得 (WYSIWYG) 關卡編輯能力。
 
----
-
-## 🛠️ 階段開發藍圖 (Step-by-Step Roadmap)
-
 ### 5. AI 設定檔雙路徑與優雅降級 (AI Config Fallback)
 *   **決策**: 捨棄 Godot 內建的 `ConfigFile` (.cfg)，改用 `.json` 作為 AI 設定檔格式。並實作 `AIManager` AutoLoad 單例。
 *   **原因**: 
@@ -65,6 +61,41 @@
     *   **解決寫死節點的痛點**: 原本主場景僅能支援單一 `$Player` 棋子，重構為動態 `instantiate()` 以支援任意數量玩家與回合輪替 (`advance_turn`)。
     *   **事件驅動 UI**: UI 組件 (`StatusUI`) 不再寫死資料，而是透過 `@onready` 搭配 Unique Name (`%`) 獲取節點參考，並在 `_ready` 透過 Signal (`pressed.connect`) 註冊事件監聽，與控制器互動。
     *   **防堵 AI 作弊 (True Fog of War)**: 若在 UI 層寫死隱藏邏輯，未來的 AI 仍可讀取對手底層參數。故將 `PlayerData` 的資產設為私有 (`_cash`)，並對外提供 `get_public_view(viewer_id)` 視圖 API (DTO 模式)。任何人 (含 AI) 呼叫皆會依照權限回傳精確或模糊化資料。
+
+### 7. 全域設定管理與單一資料來源 (Game Settings SSOT)
+*   **決策**: 建立 `GameSettings.gd` (Resource 模型) 集中定義所有遊戲內可變的偏好與規則 (如：移動速度、AI 參與度、允許回頭走)。並註冊 `SettingsManager` 作為 Autoload 提供全域存取。
+*   **原因**: 
+    *   主邏輯腳本 (`Main.gd`, `Player.gd`) 嚴禁寫死這些會被切換的偏好設定，確保邏輯只關注「執行」，規則交由「模型」決定。
+    *   達成「單一資料來源 (Single Source of Truth)」：當 `SettingUI` 更改設定時，所有讀取該值的系統能即時套用 (例如：移動動畫的 `Tween` 秒數)。
+
+### 8. UI 元件化封裝 (UI Componentization)
+*   **決策**: 針對專案特有、但 Godot 無原生對應的通用 UI 結構 (如：左右分段開關 `SegmentedSwitch`)，必須將其封裝為獨立的 Scene (`.tscn`) 與 Script (`.gd`)，存放於 `src/scenes/ui/components/`。
+*   **原因**: 
+    *   **DRY 原則 (Don't Repeat Yourself)**: 避免在不同的 UI 介面中重複手刻 `HBoxContainer` 與 `StyleBox` 排版，導致未來修改樣式時「牽一髮動全身」。
+    *   **高度重用**: 透過暴露 `@export` 變數 (如按鈕文字) 與自訂 Signal (`option_selected`)，讓其他開發者 (或 UI) 可以直接在 Inspector 中拖拉使用，無需撰寫額外排版邏輯。
+
+### 9. 傳統機會與命運系統 (Data-Driven Event System)
+*   **決策**: 捨棄在程式碼中寫死 (`if-else`) 抽卡與效果邏輯，改為使用 `events_default.json` 配合 `EventProcessor` 執行指令 (Command Pattern)。
+*   **原因**:
+    *   **高擴充性**: 新增卡片或複合效果時，完全不需要修改 GDScript，企劃可直接編寫 JSON 即可。
+    *   **無縫Fallback**: 如果 AI 模式關閉或連線失敗，遊戲可瞬間切換回 JSON 抽卡模式，確保遊戲流程不中斷。
+
+#### 📌 事件指令規格 (Event Command Specs)
+在 `events_default.json` 中的 `effects` 陣列內，每一項指令包含以下三個核心欄位：
+
+| 欄位名稱 | 型別 | 說明 | 範例值 |
+| :--- | :--- | :--- | :--- |
+| **`cmd`** | String | 定義要執行的「動作本質」。 | `"add_cash"`, `"deduct_cash"`, `"add_item"` |
+| **`target`** | String | 定義該動作影響的「目標對象」或「空間範圍」。 | `"self"` (觸發者), `"all"` (全體玩家), `"others"` (除了自己) |
+| **`amount`** | Integer/Float | 定義該動作的「強度」或「數量」。 | `500` (加五百元), `1` (降一級) |
+| *(可選)* `item_id` | String | 當 `cmd` 為 `add_item` 時，指定要給予的道具 ID。 | `"item_remote_dice"` |
+
+> **執行流 (Execution Flow)**: 
+> 1. 玩家踩中機會/命運。
+> 2. `Main.gd` 根據 JSON 中卡片的 `weight` (浮點數權重) 進行輪盤抽卡。
+> 3. 將抽出的卡片 Dictionary 傳遞給 `EventProcessor.execute_card()`。
+> 4. `EventProcessor` 解析 `target`，將目標字串轉換為具體的 `PlayerData` 實體。
+> 5. 針對每一個受影響的玩家，執行對應的 `cmd` 函式。
 
 ---
 
@@ -97,8 +128,9 @@
 ### Phase 3: GUI 與市場物價系統 (GUI & Dynamic Market) [🚧 進行中]
 *   [x] **3.1 遊戲主介面**: 實作 `UIManager` 與側邊欄選單 (Settings, Status, Inventory, Map)。
 *   [x] **3.2 玩家狀態視窗 (StatusUI)**: 實作獨立的模態視窗，包含資訊遮蔽 (Fog of War) 與動態載入的 Tree/Grid 佈局，可切換查看所有玩家狀態。
-*   [ ] **3.3 商店面板**: 實作簡單的列表顯示可購買道具 (如：遙控骰子)。
-*   [ ] **3.4 動態物價演算法**:
+*   [ ] **3.3 物品卡片架構與背包系統**: 定義主動/被動道具資料結構 (JSON 或 Resource)，實作 InventoryUI 與道具指令效果 (Command Pattern)。
+*   [ ] **3.4 商店面板**: 實作簡單的列表顯示可購買道具 (如：遙控骰子)。
+*   [ ] **3.5 動態物價演算法**:
     *   實作 `MarketManager.gd`。
     *   每次購買道具，該道具「熱度值」+1，價格上漲 (例如 +10%)。
     *   每回合結束若無人購買，熱度值衰減，價格回落。
@@ -129,20 +161,14 @@
 
 ---
 *文件建立日期: 2026-04-01*
+
 ### 📝 備忘錄 (Notes & Future Todos)
 *   **遊戲起始設定 (Lobby Setup)**:
     *   目前許多影響開局的變數 (如 `PlayerData.gd` 內的初始現金、初始存款) 皆寫死。
     *   **未來實作**: 這些屬於「單局遊戲參數 (Match Parameters)」，在實作「主選單 (Main Menu)」或「開局大廳 (Lobby/Setup Room)」時，需建立對應的 UI 讓玩家選擇 (例如：初始資金 10,000 還是 20,000)，並在進入 `Main.tscn` 時傳入初始化。
     *   **區別**: 這些只在開局生效的參數，**不應**放入可隨時動態切換的 `SettingUI` 中。
-
-### 7. 全域設定管理與單一資料來源 (Game Settings SSOT)
-*   **決策**: 建立 `GameSettings.gd` (Resource 模型) 集中定義所有遊戲內可變的偏好與規則 (如：移動速度、AI 參與度、允許回頭走)。並註冊 `SettingsManager` 作為 Autoload 提供全域存取。
-*   **原因**: 
-    *   主邏輯腳本 (`Main.gd`, `Player.gd`) 嚴禁寫死這些會被切換的偏好設定，確保邏輯只關注「執行」，規則交由「模型」決定。
-    *   達成「單一資料來源 (Single Source of Truth)」：當 `SettingUI` 更改設定時，所有讀取該值的系統能即時套用 (例如：移動動畫的 `Tween` 秒數)。
-
-### 8. UI 元件化封裝 (UI Componentization)
-*   **決策**: 針對專案特有、但 Godot 無原生對應的通用 UI 結構 (如：左右分段開關 `SegmentedSwitch`)，必須將其封裝為獨立的 Scene (`.tscn`) 與 Script (`.gd`)，存放於 `src/scenes/ui/components/`。
-*   **原因**: 
-    *   **DRY 原則 (Don't Repeat Yourself)**: 避免在不同的 UI 介面中重複手刻 `HBoxContainer` 與 `StyleBox` 排版，導致未來修改樣式時「牽一髮動全身」。
-    *   **高度重用**: 透過暴露 `@export` 變數 (如按鈕文字) 與自訂 Signal (`option_selected`)，讓其他開發者 (或 UI) 可以直接在 Inspector 中拖拉使用，無需撰寫額外排版邏輯。
+*   **道具系統架構 (Item System Architecture)**:
+    *   **分類 (Types)**: 主動使用型 (如遙控骰子)、被動觸發型 (如烏龜卡、免死金牌)。
+    *   **儲存 (Storage)**: 討論是否使用 JSON 還是 Custom Resource 儲存所有道具的資料 (名稱、圖示、效果指令)。
+    *   **實作 (Implementation)**: 參考 Event Command Pattern，讓道具效果也能被指令化，避免寫死在腳本中。
+    *   **UI**: 實作 `InventoryUI` 與 `ShopUI` 來展示與使用道具。

@@ -466,57 +466,90 @@ func _landing_land_event(cell: CellData) -> void:
 func _landing_chance_event(cell: CellData) -> void:
 	if cell is ChanceCellData:
 		var chance = cell as ChanceCellData
-		
-		# 【優雅降級架構】檢查 AI 是否可用
-		# 注意：為了避免編輯器編譯錯誤，我們動態尋找 AIManager 節點
+
+		# 【優雅降級架構】檢查 AI 是否可用且已開啟
 		var ai_manager = get_node_or_null("/root/AIManager")
-		if ai_manager != null and ai_manager.is_ai_ready():
+		if ai_manager != null and ai_manager.is_ai_ready() and SettingsManager.current.ai_enabled:
 			DebugLogger.log_msg("✨ 觸發 AI 機會事件 [%s]！準備連線..." % chance.chance_id, true)
 			# TODO: Phase 5 實作 AI 互動介面與連線邏輯
+			await get_tree().create_timer(1.5).timeout 
+			_end_turn()
 		else:
 			# 傳統無 AI 模式 (Fallback)
 			_trigger_traditional_chance_event(chance)
 	else:
 		DebugLogger.log_msg("觸發機會事件！(未設定)")
-	
-	# 等待一秒讓玩家看清楚訊息
-	await get_tree().create_timer(1.5).timeout 
-	_end_turn()
-
+		await get_tree().create_timer(1.5).timeout 
+		_end_turn()
 # 傳統抽卡模式 (免 AI)
 func _trigger_traditional_chance_event(chance: ChanceCellData) -> void:
-	var current_data = PlayerManager.get_current_turn_player()
-	
-	# 定義傳統的隨機事件庫 (未來可以抽出到獨立的 JSON)
-	var traditional_events = [
-		{"msg": "發票中獎！獲得 $500", "money": 500},
-		{"msg": "扶老奶奶過馬路，市長獎勵 $1000", "money": 1000},
-		{"msg": "超速被開單，罰款 $300", "money": -300},
-		{"msg": "錢包掉在路上，損失 $800", "money": -800},
-		{"msg": "只是個路過的好心人，什麼事都沒發生。", "money": 0}
-	]
-	
-	# 隨機抽取一個事件
-	var result = traditional_events.pick_random()
-	
-	# 印出結果
-	var title = "[傳統機會: %s] " % chance.chance_id
-	DebugLogger.log_msg("🎴 " + title + result.msg, true)
-	
-	# 執行獎懲
-	if result.money > 0:
-		current_data.add_cash(result.money)
-	elif result.money < 0:
-		current_data.deduct_cash(-result.money)
+	_draw_and_execute_card("chance")
 
+func _trigger_traditional_destiny_event(destiny: DestinyCellData) -> void:
+	_draw_and_execute_card("destiny")
+
+func _draw_and_execute_card(category: String) -> void:
+	var current_data = PlayerManager.get_current_turn_player()
+
+	# 從 EventProcessor 取出已經載入並驗證過的 JSON
+	var json_data = EventProcessor.default_events
+	if json_data.is_empty() or not json_data.has(category):
+		DebugLogger.log_msg("[ERROR] 事件庫是空的或找不到類別: " + category)
+		_end_turn()
+		return
+
+	var events_list: Array = json_data[category]
+	if events_list.is_empty():
+		DebugLogger.log_msg("[ERROR] 事件庫是空的！")
+		_end_turn()
+		return
+
+	# 根據 Weight 進行抽卡 (機率輪盤)
+	var total_weight: float = 0.0
+	for e in events_list:
+		total_weight += float(e.get("weight", 1.0))
+
+	# 使用 randf() * total_weight 來取得 0 ~ total_weight 之間的浮點數亂數
+	var roll: float = randf() * total_weight
+	var current_weight: float = 0.0
+	var selected_card = null
+
+	for e in events_list:
+		current_weight += float(e.get("weight", 1.0))
+		if roll < current_weight:
+			selected_card = e
+			break
+	if selected_card == null:
+		selected_card = events_list[0] # 防呆
+
+	# 印出 UI
+	var icon = "🎴" if category == "chance" else "💀"
+	var type_str = "機會" if category == "chance" else "命運"
+	DebugLogger.log_msg("%s [%s卡] %s: %s" % [icon, type_str, selected_card.get("title", ""), selected_card.get("description", "")], true)
+
+	# 讓玩家看清楚卡片
+	await get_tree().create_timer(2.0).timeout
+
+	# 執行效果 (呼叫 EventProcessor)
+	EventProcessor.execute_card(selected_card, current_data)
+
+	await get_tree().create_timer(1.0).timeout
+	_end_turn()
 func _landing_destiny_event(cell: CellData) -> void:
 	if cell is DestinyCellData:
 		var destiny = cell as DestinyCellData
-		DebugLogger.log_msg("觸發命運事件 [%s]！" % destiny.destiny_id)
+		var ai_manager = get_node_or_null("/root/AIManager")
+		if ai_manager != null and ai_manager.is_ai_ready() and SettingsManager.current.ai_enabled:
+			DebugLogger.log_msg("💀 觸發 AI 命運事件 [%s]！準備連線..." % destiny.destiny_id, true)
+			# TODO: Phase 5
+			await get_tree().create_timer(1.5).timeout 
+			_end_turn()
+		else:
+			_trigger_traditional_destiny_event(destiny)
 	else:
 		DebugLogger.log_msg("觸發命運事件！(未設定)")
-	await get_tree().create_timer(1.0).timeout 
-	_end_turn()
+		await get_tree().create_timer(1.0).timeout 
+		_end_turn()
 
 func _landing_minigame_event(cell: CellData) -> void:
 	if cell is MinigameCellData:

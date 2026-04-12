@@ -75,3 +75,7 @@ func deduct_cash(amount: int) -> bool:
 		_cash = 0
 		DebugLogger.log_msg("玩家 [%s] 現金不足，宣告破產！" % name, true)
 		return false
+
+func add_item(item_id: String, quantity: int = 1) -> void:
+	for i in range(quantity):
+		_items.append(item_id)
