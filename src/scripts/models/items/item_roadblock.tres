@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3 uid="uid://item_roadblock_001"]
+
+[ext_resource type="Script" uid="uid://item_roadblock_script" path="res://scripts/models/items/ItemData.gd" id="1_itemdata"]
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "item_roadblock"
+name = "路障卡"
+description = "在此格放置一個路障。任何人經過都會被迫停下並結束回合。"
+type = 0
+price = 800
+effects = [{
+"cmd": "place_roadblock",
+"target": "self"
+}]

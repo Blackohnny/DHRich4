@@ -18,6 +18,7 @@ func _ready() -> void:
 
 const STATUS_UI_SCENE = preload("res://scenes/ui/StatusUI.tscn")
 const SETTING_UI_SCENE = preload("res://scenes/ui/SettingUI.tscn")
+const INVENTORY_UI_SCENE = preload("res://scenes/ui/InventoryUI.tscn")
 
 func _process(_delta: float) -> void:
 	_update_buttons_state()
@@ -47,6 +48,7 @@ func _on_settings_pressed() -> void:
 	DebugLogger.log_msg("⚙️ 開啟設定選單", true)
 	var setting_ui = SETTING_UI_SCENE.instantiate() as SettingUI
 	add_child(setting_ui)
+	
 func _on_status_pressed() -> void:
 	DebugLogger.log_msg("📊 開啟玩家狀態視窗", true)
 	var status_ui = STATUS_UI_SCENE.instantiate() as StatusUI
@@ -64,7 +66,21 @@ func _on_status_pressed() -> void:
 	status_ui.setup(target_id)
 
 func _on_inventory_pressed() -> void:
-	DebugLogger.log_msg("🎒 開啟背包 (尚未實作)", true)
+	DebugLogger.log_msg("🎒 開啟背包", true)
+	var pm = get_node_or_null("/root/PlayerManager")
+	if pm == null: return
+	
+	var current_player = pm.get_current_turn_player()
+	if current_player == null: return
+	
+	var inv_ui = INVENTORY_UI_SCENE.instantiate() as InventoryUI
+	add_child(inv_ui)
+	inv_ui.setup(current_player)
+	
+	# 綁定卡牌使用事件到主場景
+	var main = get_tree().current_scene
+	if main.has_method("on_inventory_item_used"):
+		inv_ui.item_used.connect(main.on_inventory_item_used)
 
 func _on_map_pressed() -> void:
 	DebugLogger.log_msg("🗺️ 開啟大地圖 (尚未實作)", true)

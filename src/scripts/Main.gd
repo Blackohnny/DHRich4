@@ -93,13 +93,19 @@ func _start_turn() -> void:
 	var current_data = pm.get_current_turn_player()
 	
 	# 更新 active_player_entity 快取
-	active_player_entity = player_entities[current_data.id]
+	# Player ID 不一定等於 Index (因為我們把 P1 的 ID 設為 1，但它在 Array 裡是 Index 0)
+	# 必須用迴圈找出對應 ID 的 Entity
+	for entity in player_entities:
+		if entity.player_id == current_data.id:
+			active_player_entity = entity
+			break
 	
 	# 【細節】：把輪到的棋子拉到最上層，其他棋子降下去
 	for entity in player_entities:
 		entity.set_active_turn(entity == active_player_entity)
 		
 	current_state = GameState.WAITING_ROLL
+	forced_dice_steps = 0
 	DebugLogger.log_msg("=== 輪到 [%s] 的回合 ===" % current_data.name, true)
 	
 	# 如果是 AI，自動假裝思考後擲骰
@@ -238,13 +244,18 @@ func force_move(steps: int) -> void:
 func _roll_dice_and_move() -> void:
 	current_state = GameState.MOVING # 切換狀態：移動中
 
-	# Godot 內建亂數，randi_range 產生指定範圍的整數
-	var dice_roll: int = randi_range(1, 6) 
+	var dice_roll: int = 0
+	if forced_dice_steps > 0:
+		dice_roll = forced_dice_steps
+		DebugLogger.log_msg("🎲 玩家使用了道具，強制走 %d 步！" % dice_roll, true)
+		forced_dice_steps = 0
+	else:
+		dice_roll = randi_range(1, 6)
+		DebugLogger.log_msg("🎲 玩家骰出了 %d 點，開始移動..." % dice_roll, true)
+
 	remaining_steps = dice_roll
-
-	DebugLogger.log_msg("🎲 玩家骰出了 %d 點，開始移動..." % dice_roll, true)
-
 	_process_next_step()
+
 
 # 4. 處理下一步的遞迴邏輯 (處理有向圖走訪與步數消耗)
 func _process_next_step() -> void:
@@ -580,4 +591,35 @@ func _end_turn() -> void:
 			
 	# Fallback (防呆)
 	current_state = GameState.WAITING_ROLL
+	forced_dice_steps = 0
 	DebugLogger.log_msg("回合結束。請按空白鍵 (Space) 擲骰子。", true)
+
+# ---------------------------------------------------------
+# 道具使用邏輯 (Inventory & Items)
+# ---------------------------------------------------------
+var forced_dice_steps: int = 0
+
+func on_inventory_item_used(item_data: ItemData) -> void:
+	if current_state != GameState.WAITING_ROLL:
+		DebugLogger.log_msg("[警告] 只有在等待擲骰時才能使用道具！")
+		return
+		
+	DebugLogger.log_msg("💥 玩家使用了道具：[%s]" % item_data.name, true)
+	
+	# 將道具的 effects 轉換為假卡片格式，丟給 EventProcessor 處理
+	var mock_card = {"effects": item_data.effects}
+	var current_player = PlayerManager.get_current_turn_player()
+	
+	var processor = get_node_or_null("/root/EventProcessor")
+	if processor != null:
+		processor.execute_card(mock_card, current_player)
+	else:
+		EventProcessor.new().execute_card(mock_card, current_player)
+
+func open_remote_dice_ui() -> void:
+	# 暫時用作弊視窗的按鈕代替，這裡應該要彈出一個 1-6 的按鈕視窗
+	DebugLogger.log_msg("📡 開啟遙控骰子選擇介面！(尚未實作 UI，請使用作弊面板點擊「走 1 步」~「走 6 步」按鈕代替)", true)
+	# 進入特殊狀態，等待玩家從外部輸入步數
+	current_state = GameState.EVENT_HANDLING 
+
+# ---------------------------------------------------------

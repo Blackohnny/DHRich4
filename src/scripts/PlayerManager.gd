@@ -16,17 +16,17 @@ func _ready() -> void:
 func _setup_test_players() -> void:
 	players.clear()
 	current_turn_index = 0
-	
+
 	# 玩家 1 (本機控制) - 火球鼠
-	var p1 = PlayerData.new(0, "玩家 1 (你)", "155_Cyndaquil.png", false)
+	var p1 = PlayerData.new(1, "玩家 1 (你)", "155_Cyndaquil.png", false)
 	players.append(p1)
-	
+
 	# 玩家 2 (本機控制) - 菊石獸
-	var p2 = PlayerData.new(1, "玩家 2", "138_Omanyte.png", false)
+	var p2 = PlayerData.new(2, "玩家 2", "138_Omanyte.png", false)
 	players.append(p2)
-	
+
 	# 電腦 B - 巨金怪
-	var p3 = PlayerData.new(2, "電腦 B", "376_Metagross.png", true)
+	var p3 = PlayerData.new(3, "電腦 B", "376_Metagross.png", true)
 	players.append(p3)
 
 # 取得所有玩家

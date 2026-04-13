@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3 uid="uid://item_missile_001"]
+
+[ext_resource type="Script" uid="uid://item_missile_script" path="res://scripts/models/items/ItemData.gd" id="1_itemdata"]
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "item_missile"
+name = "飛彈卡"
+description = "發射飛彈攻擊所有人！強制扣除其他玩家 500 元現金與 20 點點數。"
+type = 0
+price = 2000
+effects = [{
+"amount": 500,
+"cmd": "deduct_cash",
+"target": "others"
+}, {
+"amount": 20,
+"cmd": "deduct_points",
+"target": "others"
+}]

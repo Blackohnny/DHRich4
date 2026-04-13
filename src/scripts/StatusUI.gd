@@ -48,15 +48,26 @@ func _ready() -> void:
 func setup(initial_player_id: int) -> void:
 	current_viewing_player_id = initial_player_id
 	if player_tabs:
-		player_tabs.current_tab = initial_player_id
+		# 找出 initial_player_id 所在的 tab index
+		var pm = get_node_or_null("/root/PlayerManager")
+		if pm:
+			var players = pm.get_all_players()
+			for idx in range(players.size()):
+				if players[idx].id == initial_player_id:
+					player_tabs.current_tab = idx
+					break
 	_refresh_ui_for_player(current_viewing_player_id)
 
 func _on_close_pressed() -> void:
 	queue_free()
 
 func _on_player_tab_clicked(tab: int) -> void:
-	# 這裡的 tab index 剛好對應我們測試用的 player_id (0, 1, 2)
-	_refresh_ui_for_player(tab)
+	# tab index 對應 PlayerManager 裡的陣列索引
+	var pm = get_node_or_null("/root/PlayerManager")
+	if pm:
+		var players = pm.get_all_players()
+		if tab < players.size():
+			_refresh_ui_for_player(players[tab].id)
 
 func _setup_tabs() -> void:
 	if not player_tabs: return

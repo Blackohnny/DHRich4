@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3 uid="uid://item_turtle_001"]
+
+[ext_resource type="Script" uid="uid://item_turtle_script" path="res://scripts/models/items/ItemData.gd" id="1_itemdata"]
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "item_turtle"
+name = "烏龜卡"
+description = "對自己施放遲緩魔法。未來三回合內，每次擲骰子都只會走 1 步。(尚未實作回合倒數)"
+type = 0
+price = 500
+effects = [{
+"amount": 1,
+"cmd": "set_dice",
+"target": "self"
+}]

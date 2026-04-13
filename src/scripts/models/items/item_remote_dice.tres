@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3 uid="uid://item_remote_dice_001"]
+
+[ext_resource type="Script" uid="uid://item_remote_dice_script" path="res://scripts/models/items/ItemData.gd" id="1_itemdata"]
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "item_remote_dice"
+name = "遙控骰子"
+description = "隨心所欲控制你下一步要走的點數 (1-6)。"
+type = 0
+price = 1500
+effects = [{
+"cmd": "remote_dice",
+"target": "self"
+}]

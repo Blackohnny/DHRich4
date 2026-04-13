@@ -80,6 +80,14 @@
     *   **高擴充性**: 新增卡片或複合效果時，完全不需要修改 GDScript，企劃可直接編寫 JSON 即可。
     *   **無縫Fallback**: 如果 AI 模式關閉或連線失敗，遊戲可瞬間切換回 JSON 抽卡模式，確保遊戲流程不中斷。
 
+
+### 10. 資料驅動道具系統 (Data-Driven Item System vs Handler Pattern)
+*   **決策**: 放棄傳統的「道具 ID 查表法 (Handler Pattern)」，改用 Godot Custom Resource (`.tres`) 定義道具，並將邏輯拆解為可組合的指令 (Command Pattern) 交由 `EventProcessor` 執行。
+*   **原因**: 
+    *   **所見即所得 (WYSIWYG)**: 在 Inspector 可以直接預覽道具圖示與數值，對設計師/企劃友善。
+    *   **無盡的擴充性**: 傳統 Handler 會產生幾千行的 `match` 語句，違反開放封閉原則 (OCP)。利用指令組合 (如 `add_cash`, `set_dice`)，不需寫任何程式碼即可創造無限種新卡片 (如「飛彈卡」可組合「扣別人錢」+「扣別人點數」)。
+    *   **邏輯重用**: 與抽卡系統 (機會/命運) 共用同一套 `EventProcessor` 執行引擎，極度 DRY。
+
 #### 📌 事件指令規格 (Event Command Specs)
 在 `events_default.json` 中的 `effects` 陣列內，每一項指令包含以下三個核心欄位：
 
@@ -128,7 +136,7 @@
 ### Phase 3: GUI 與市場物價系統 (GUI & Dynamic Market) [🚧 進行中]
 *   [x] **3.1 遊戲主介面**: 實作 `UIManager` 與側邊欄選單 (Settings, Status, Inventory, Map)。
 *   [x] **3.2 玩家狀態視窗 (StatusUI)**: 實作獨立的模態視窗，包含資訊遮蔽 (Fog of War) 與動態載入的 Tree/Grid 佈局，可切換查看所有玩家狀態。
-*   [ ] **3.3 物品卡片架構與背包系統**: 定義主動/被動道具資料結構 (JSON 或 Resource)，實作 InventoryUI 與道具指令效果 (Command Pattern)。
+*   [x] **3.3 物品卡片架構與背包系統**: 定義主動/被動道具資料結構 (JSON 或 Resource)，實作 InventoryUI 與道具指令效果 (Command Pattern)。
 *   [ ] **3.4 商店面板**: 實作簡單的列表顯示可購買道具 (如：遙控骰子)。
 *   [ ] **3.5 動態物價演算法**:
     *   實作 `MarketManager.gd`。
@@ -172,3 +180,20 @@
     *   **儲存 (Storage)**: 討論是否使用 JSON 還是 Custom Resource 儲存所有道具的資料 (名稱、圖示、效果指令)。
     *   **實作 (Implementation)**: 參考 Event Command Pattern，讓道具效果也能被指令化，避免寫死在腳本中。
     *   **UI**: 實作 `InventoryUI` 與 `ShopUI` 來展示與使用道具。
+*   **世界事件與總體經濟系統 (World Events & Macroeconomics)**:
+    *   **觸發時機**: 統一在一個完整回合 (Round) 結束時 (所有玩家皆行動過一次) 結算，確保每位玩家面對的經濟起跑點公平。
+    *   **明面表現 (View)**: 觸發「世界事件」(如新聞快報、突發天災、股市大漲)，未來可與 Phase 4 的現實世界 API 結合。
+    *   **暗面機制 (Model)**: 引入「通膨係數 (Inflation Rate)」。隨著回合推進或事件影響，全域的地價、過路費、道具價格會動態上升。這能有效消耗玩家後期過剩的現金，避免遊戲陷入僵局 (Stalemate)。
+
+### 📝 背包介面 (Inventory) 與狀態介面 (Status) 的職責區隔 (Separation of Concerns)
+在設計 UI 時，我們決定將 `InventoryUI` 與 `StatusUI` 拆分為兩個獨立的介面，雖然它們都會顯示玩家持有的「道具」，但其目的與互動層級完全不同：
+
+1.  **狀態介面 (StatusUI - 唯讀 View)**：
+    *   **目的**：提供全域的「情報探查」。玩家開啟它來觀看對手（或自己）的資產、持有的地產總覽，以及道具「數量」。
+    *   **互動**：純展示，**不能**在此介面點擊道具或使用道具。它依賴 `PlayerData.get_public_view()` 獲取被資訊遮蔽 (Fog of War) 過濾後的資料。
+2.  **背包介面 (InventoryUI - 可互動 Controller/View)**：
+    *   **目的**：專屬於「當前行動玩家 (Current Player)」的戰術面板。
+    *   **互動**：玩家在此查看自己道具的詳細說明（卡牌樣式），並點擊「使用 (Use)」或「丟棄 (Discard)」按鈕。
+    *   **限制**：只有在玩家自己的回合 (例如 `WAITING_ROLL` 狀態) 才能開啟並操作。它直接讀取當前玩家的私有 `_items` 陣列。
+
+這樣的 MVC 解耦確保了「看情報」與「下指令」不會混淆，未來就算加入 AI 對手或連線模式，權限控管也會非常清晰。

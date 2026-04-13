@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3 uid="uid://item_angel_001"]
+
+[ext_resource type="Script" uid="uid://item_angel_script" path="res://scripts/models/items/ItemData.gd" id="1_itemdata"]
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "item_angel"
+name = "天使卡"
+description = "召喚天使降臨！為全體玩家各發放 1000 元紓困金。"
+type = 0
+price = 1000
+effects = [{
+"amount": 1000,
+"cmd": "add_cash",
+"target": "all"
+}]

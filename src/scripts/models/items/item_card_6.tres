@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3 uid="uid://item_card_6_001"]
+
+[ext_resource type="Script" uid="uid://item_card_6_script" path="res://scripts/models/items/ItemData.gd" id="1_itemdata"]
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "item_card_6"
+name = "六步卡"
+description = "指定你下一步必須走 6 步。"
+type = 0
+price = 500
+effects = [{
+"amount": 6,
+"cmd": "set_dice",
+"target": "self"
+}]
