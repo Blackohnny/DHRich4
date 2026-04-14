@@ -449,7 +449,7 @@ func _landing_start_event(_cell: CellData) -> void:
 
 const CONFIRM_DIALOG_SCENE = preload("res://scenes/ui/components/ConfirmDialog.tscn")
 
-func _show_dialog(title: String, message: String, is_dual: bool = true, confirm_text: String = "確認", cancel_text: String = "取消") -> bool:
+func show_dialog(title: String, message: String, is_dual: bool = true, confirm_text: String = "確認", cancel_text: String = "取消") -> bool:
 	var dialog = CONFIRM_DIALOG_SCENE.instantiate() as ConfirmDialogUI
 	$UI.add_child(dialog) # 加在 UI 節點下以確保在最上層
 	dialog.setup(title, message, is_dual, confirm_text, cancel_text)
@@ -461,76 +461,61 @@ func _show_dialog(title: String, message: String, is_dual: bool = true, confirm_
 func _landing_land_event(cell: CellData) -> void:
 	var current_data = get_node("/root/PlayerManager").get_current_turn_player()
 	
-	# 切換狀態，避免玩家在等待對話框時做其他事 (但依然可以開 StatusUI)
+	# 切換狀態，避免玩家在等待對話框時做其他事
 	current_state = GameState.EVENT_HANDLING
 
 	if cell is LandCellData:
 		var land = cell as LandCellData
+		
+		# --- 無主地 ---
 		if land.owner_id == -1:
-			# 無主地
-			var msg = "踩到無主空地！\n名稱：[%s]\n售價：$%d\n您目前的現金：$%d\n是否要購買？" % [land.name, land.price, current_data._cash]
-			if current_data.is_ai:
-				# AI 決策：有錢就買 (暫定)
-				if current_data._cash >= land.price:
-					current_data.deduct_cash(land.price)
+			var want_to_buy = await current_data.brain.decide_buy_land(land, current_data)
+			if want_to_buy:
+				if current_data.deduct_cash(land.price):
 					land.owner_id = current_data.id
 					current_data.add_property(land)
 					_check_monopoly(land.district_id, current_data.id)
-					DebugLogger.log_msg("AI 自動購買成功！[%s]" % land.name)
-			else:
-				# 真人決策：彈出雙選視窗
-				var want_to_buy = await _show_dialog("購買土地", msg, true, "購買 ($%d)" % land.price, "放棄")
-				if want_to_buy:
-					if current_data.deduct_cash(land.price):
-						land.owner_id = current_data.id
-						current_data.add_property(land)
-						_check_monopoly(land.district_id, current_data.id)
+					if current_data.brain is HumanBrain:
 						DebugLogger.log_msg("購買成功！[%s] 擁有者變為玩家 %d" % [land.name, current_data.id])
 					else:
-						await _show_dialog("餘額不足", "您的現金不夠購買這塊地！", false, "確定")
+						DebugLogger.log_msg("AI 自動購買成功！[%s]" % land.name)
+				elif current_data.brain is HumanBrain:
+					await show_dialog("餘額不足", "您的現金不夠購買這塊地！", false, "確定")
 		
+		# --- 別人的地 ---
 		elif land.owner_id != current_data.id:
-			# 別人的地
 			var owner_data = get_node("/root/PlayerManager").get_player(land.owner_id)
 			var current_toll = land.get_current_toll()
 			var modifier = " (含區域連鎖翻倍!)" if land.is_monopoly else ""
 			
 			var msg = "您踩到了 [%s] 的地盤！\n地產名稱：[%s]\n必須支付過路費：$%d%s" % [owner_data.name, land.name, current_toll, modifier]
 			
-			if current_data.is_ai:
-				current_data.deduct_cash(current_toll)
-				if owner_data: owner_data.add_cash(current_toll)
-			else:
+			if current_data.brain is HumanBrain:
 				# 真人決策：彈出單選視窗 (強迫繳費)
-				await _show_dialog("支付過路費", msg, false, "繳納 ($%d)" % current_toll)
-				current_data.deduct_cash(current_toll)
-				if owner_data: owner_data.add_cash(current_toll)
+				await show_dialog("支付過路費", msg, false, "繳納 ($%d)" % current_toll)
+			
+			current_data.deduct_cash(current_toll)
+			if owner_data: owner_data.add_cash(current_toll)
 		
+		# --- 自己的地 ---
 		else:
-			# 自己的地
 			var upgrade_cost = land.get_upgrade_cost()
 			if land.level >= 5:
-				if current_data.is_ai:
+				if current_data.brain is HumanBrain:
+					await show_dialog("歡迎回家", "您的地產 [%s] 已經達到最高等級 (5級)，無法再升級了！" % land.name, false, "確定")
+				else:
 					DebugLogger.log_msg("AI 踩到自己的地，已達最高等級。")
-				else:
-					await _show_dialog("歡迎回家", "您的地產 [%s] 已經達到最高等級 (5級)，無法再升級了！" % land.name, false, "確定")
 			else:
-				var msg = "歡迎回到自己的地產！\n名稱：[%s]\n目前等級：%d\n\n花費 $%d 升級房屋可以大幅提升過路費。\n是否要升級？" % [land.name, land.level, upgrade_cost]
-				
-				if current_data.is_ai:
-					# AI 決策：有錢就升級 (暫定)
-					if current_data._cash >= upgrade_cost:
-						current_data.deduct_cash(upgrade_cost)
+				var want_to_upgrade = await current_data.brain.decide_upgrade_land(land, upgrade_cost, current_data)
+				if want_to_upgrade:
+					if current_data.deduct_cash(upgrade_cost):
 						land.level += 1
-				else:
-					# 真人決策：彈出雙選視窗
-					var want_to_upgrade = await _show_dialog("升級地產", msg, true, "升級 ($%d)" % upgrade_cost, "不需要")
-					if want_to_upgrade:
-						if current_data.deduct_cash(upgrade_cost):
-							land.level += 1
+						if current_data.brain is HumanBrain:
 							DebugLogger.log_msg("升級成功！[%s] 升為等級 %d，過路費提升為 $%d" % [land.name, land.level, land.get_current_toll()])
 						else:
-							await _show_dialog("餘額不足", "您的現金不夠升級這塊地！", false, "確定")
+							DebugLogger.log_msg("AI 升級成功！[%s] 等級 %d" % [land.name, land.level])
+					elif current_data.brain is HumanBrain:
+						await show_dialog("餘額不足", "您的現金不夠升級這塊地！", false, "確定")
 	else:
 		DebugLogger.log_msg("[ERROR] 型別錯誤：格子宣稱是 LAND，但不是 LandCellData 實體！")
 

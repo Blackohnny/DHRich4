@@ -1,9 +1,3 @@
-### 📝 通用對話框與事件中斷 (Generic Dialog & Event Interrupt)
-在實作土地購買、升級，以及未來的「被動道具 (如免費卡)」時，我們需要一個非阻塞式的通用對話框 (Generic Dialog)。
-*   **設計目標**: 
-    1.  **非阻塞 (Non-blocking)**: 對話框彈出時，遊戲主迴圈 (`Main.gd`) 必須 `await` 玩家的決定，但**不能鎖死 UI**。玩家必須能自由切換到 `StatusUI` 查看自己或對手的資產，或打開 `Map` 查看地圖，然後再回來做決定。
-    2.  **通用性 (Genericity)**: 支援「單選 (確認/關閉)」(例如：付過路費) 與「雙選 (是/否)」(例如：是否花 $1000 買地)。
-    3.  **狀態機整合**: 在對話框開啟期間，`Main.gd` 的狀態機應處於 `EVENT_HANDLING`，防止玩家在此時再次擲骰子。
 # DHRich4 - AI 驅動大富翁 開發計畫 (Development Plan)
 
 ## 專案概述 (Project Overview)
@@ -86,7 +80,6 @@
     *   **高擴充性**: 新增卡片或複合效果時，完全不需要修改 GDScript，企劃可直接編寫 JSON 即可。
     *   **無縫Fallback**: 如果 AI 模式關閉或連線失敗，遊戲可瞬間切換回 JSON 抽卡模式，確保遊戲流程不中斷。
 
-
 ### 10. 資料驅動道具系統 (Data-Driven Item System vs Handler Pattern)
 *   **決策**: 放棄傳統的「道具 ID 查表法 (Handler Pattern)」，改用 Godot Custom Resource (`.tres`) 定義道具，並將邏輯拆解為可組合的指令 (Command Pattern) 交由 `EventProcessor` 執行。
 *   **原因**: 
@@ -94,25 +87,31 @@
     *   **無盡的擴充性**: 傳統 Handler 會產生幾千行的 `match` 語句，違反開放封閉原則 (OCP)。利用指令組合 (如 `add_cash`, `set_dice`)，不需寫任何程式碼即可創造無限種新卡片 (如「飛彈卡」可組合「扣別人錢」+「扣別人點數」)。
     *   **邏輯重用**: 與抽卡系統 (機會/命運) 共用同一套 `EventProcessor` 執行引擎，極度 DRY。
 
-#### 📌 事件指令規格 (Event Command Specs)
-在 `events_default.json` 中的 `effects` 陣列內，每一項指令包含以下三個核心欄位：
+#### 📌 補充說明：事件指令規格 (Event Command Specs)
+在 `events_default.json` 以及道具 `.tres` 檔案中的 `effects` 陣列內，每一項指令包含以下核心欄位：
 
 | 欄位名稱 | 型別 | 說明 | 範例值 |
 | :--- | :--- | :--- | :--- |
-| **`cmd`** | String | 定義要執行的「動作本質」。 | `"add_cash"`, `"deduct_cash"`, `"add_item"` |
-| **`target`** | String | 定義該動作影響的「目標對象」或「空間範圍」。 | `"self"` (觸發者), `"all"` (全體玩家), `"others"` (除了自己) |
-| **`amount`** | Integer/Float | 定義該動作的「強度」或「數量」。 | `500` (加五百元), `1` (降一級) |
+| **`cmd`** | String | 定義要執行的「動作本質」。 | `"add_cash"`, `"deduct_cash"`, `"set_dice"` |
+| **`target`** | String | 定義該動作影響的「目標對象」或「空間範圍」。 | `"self"`, `"all"`, `"others"` |
+| **`amount`** | Integer/Float | 定義該動作的「強度」或「數量」。 | `500` (加五百元), `6` (走六步) |
 | *(可選)* `item_id` | String | 當 `cmd` 為 `add_item` 時，指定要給予的道具 ID。 | `"item_remote_dice"` |
 
 > **執行流 (Execution Flow)**: 
-> 1. 玩家踩中機會/命運。
-> 2. `Main.gd` 根據 JSON 中卡片的 `weight` (浮點數權重) 進行輪盤抽卡。
-> 3. 將抽出的卡片 Dictionary 傳遞給 `EventProcessor.execute_card()`。
+> 1. 玩家踩中機會/命運，或點擊使用道具。
+> 2. 系統取出資料中的 `effects` 陣列。
+> 3. 將陣列傳遞給 `EventProcessor.execute_card()`。
 > 4. `EventProcessor` 解析 `target`，將目標字串轉換為具體的 `PlayerData` 實體。
 > 5. 針對每一個受影響的玩家，執行對應的 `cmd` 函式。
 
----
+### 11. AI 決策邏輯與狀態分離 (AI Controller & Memory Extraction)
+*   **決策**: 採用「策略模式 (Strategy Pattern)」，將玩家的決策行為從 `Main.gd` 抽離為獨立的 `PlayerBrain` 介面 (分為 `HumanBrain`, `LocalAIBrain`, `LLMAIBrain` 三種實作)。同時，將 AI 的長期記憶與性格狀態儲存於 `PlayerData` 的 `ai_memory` 字典中。
+*   **原因**: 
+    *   **無縫動態降級 (Graceful Degradation)**: 當連網的 `LLMAIBrain` 發生網路中斷時，系統可瞬間將玩家的大腦替換為 `LocalAIBrain`。因為記憶 (State) 存在於 `PlayerData` 而非大腦本身，AI 的性格與仇恨值完全不會遺失。
+    *   **解決非同步災難**: `Main.gd` 不需再處理「本地 AI 瞬間決定」與「連網 AI 等待 API」的複雜 `await` 分支，只需統一呼叫 `await player.brain.decide_buy_land()`。
+    *   詳見 `docs/ai_architecture_strategy.md`。
 
+---
 ## 🛠️ 階段開發藍圖 (Step-by-Step Roadmap)
 
 ### Phase 1: 基礎建設與平移動畫 (Foundation & Movement) [✅ 完成]
@@ -203,3 +202,11 @@
     *   **限制**：只有在玩家自己的回合 (例如 `WAITING_ROLL` 狀態) 才能開啟並操作。它直接讀取當前玩家的私有 `_items` 陣列。
 
 這樣的 MVC 解耦確保了「看情報」與「下指令」不會混淆，未來就算加入 AI 對手或連線模式，權限控管也會非常清晰。
+
+
+### 📝 通用對話框與事件中斷 (Generic Dialog & Event Interrupt)
+在實作土地購買、升級，以及未來的「被動道具 (如免費卡)」時，我們需要一個非阻塞式的通用對話框 (Generic Dialog)。
+*   **設計目標**: 
+    1.  **非阻塞 (Non-blocking)**: 對話框彈出時，遊戲主迴圈 (`Main.gd`) 必須 `await` 玩家的決定，但**不能鎖死 UI**。玩家必須能自由切換到 `StatusUI` 查看自己或對手的資產，或打開 `Map` 查看地圖，然後再回來做決定。
+    2.  **通用性 (Genericity)**: 支援「單選 (確認/關閉)」(例如：付過路費) 與「雙選 (是/否)」(例如：是否花 $1000 買地)。
+    3.  **狀態機整合**: 在對話框開啟期間，`Main.gd` 的狀態機應處於 `EVENT_HANDLING`，防止玩家在此時再次擲骰子。

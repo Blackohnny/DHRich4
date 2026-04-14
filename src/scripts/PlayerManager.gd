@@ -10,6 +10,7 @@ var players: Array[PlayerData] = []
 var current_turn_index: int = 0 # 陣列索引 (0, 1, 2...)
 
 func _ready() -> void:
+	SettingsManager.settings_changed.connect(_on_settings_changed)
 	# (暫時在此初始化三個測試玩家。未來此步驟應該由大廳/開局介面呼叫)
 	_setup_test_players()
 
@@ -51,3 +52,23 @@ func advance_turn() -> PlayerData:
 	if players.is_empty(): return null
 	current_turn_index = (current_turn_index + 1) % players.size()
 	return get_current_turn_player()
+
+# 當全域設定改變時，檢查是否需要動態換腦
+func _on_settings_changed() -> void:
+	var ai_enabled = SettingsManager.current.ai_enabled
+	
+	for p in players:
+		if p.is_ai:
+			if ai_enabled:
+				# 玩家在設定裡開啟了 AI
+				# 理想狀態下，應該在這裡先 ping 網路，成功才換。
+				# 目前我們先寫死：如果是玩家 3，且現在的腦不是 LLM，就幫他換回 LLM
+				if p.id == 3 and not p.brain is LLMAIBrain:
+					p.brain = LLMAIBrain.new()
+					DebugLogger.log_msg("系統已將玩家 [%s] 的大腦升級為連網 LLM。" % p.name, true)
+			else:
+				# 玩家在設定裡關閉了 AI
+				# 發現真腦，強制降級為假腦
+				if p.brain is LLMAIBrain:
+					p.brain = LocalAIBrain.new()
+					DebugLogger.log_msg("系統已將玩家 [%s] 的大腦降級為本地假 AI。" % p.name, true)

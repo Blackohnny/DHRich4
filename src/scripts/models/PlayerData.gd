@@ -21,11 +21,24 @@ var _properties: Array[LandCellData] = [] # 玩家擁有的地產
 # 將 _items 改為存放 ItemData 資源的 Array (確保強型別)
 var _items: Array[ItemData] = []
 
+# --- AI 決策大腦與記憶 ---
+var brain: PlayerBrain
+var ai_memory: Dictionary = {"personality": "neutral"}
+
 func _init(_id: int, _name: String, _avatar: String, _is_ai: bool = false) -> void:
 	self.id = _id
 	self.name = _name
 	self.avatar_filename = _avatar
 	self.is_ai = _is_ai
+
+	if not _is_ai:
+		brain = HumanBrain.new()
+	else:
+		# 測試配置：玩家 3 (電腦 B) 給予 LLM 腦，其他給 Local 假腦
+		if _id == 3:
+			brain = LLMAIBrain.new()
+		else:
+			brain = LocalAIBrain.new()
 	
 	# ===== 測試用：預設給予道具 =====
 	if self.id == 1:
@@ -142,3 +155,5 @@ func remove_item(item_id: String) -> bool:
 			DebugLogger.log_msg("玩家 [%s] 失去道具: %s" % [name, removed_name], true)
 			return true
 	return false
+
+# ---------------------------------------------------------

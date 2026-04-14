@@ -28,7 +28,7 @@ func _ready() -> void:
 	if ai_tab_btn: ai_tab_btn.pressed.connect(_switch_tab.bind(ai_panel))
 	
 	# 綁定關閉事件
-	close_btn.pressed.connect(queue_free)
+	close_btn.pressed.connect(_on_close_btn_pressed)
 	
 	# 綁定設定更新事件
 	backtrack_switch.option_selected.connect(_on_backtrack_selected)
@@ -100,3 +100,7 @@ func _on_ai_toggle_selected(index: int) -> void:
 	var enable = (index == 0)
 	SettingsManager.current.ai_enabled = enable
 	DebugLogger.log_msg("🔧 設定已變更: AI 命運之神對話 -> " + str(enable))
+
+func _on_close_btn_pressed() -> void:
+	SettingsManager.save_settings() # 觸發全域廣播
+	queue_free()
