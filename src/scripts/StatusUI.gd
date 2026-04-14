@@ -99,44 +99,59 @@ func _refresh_ui_for_player(player_id: int) -> void:
 		my_viewer_id = current_player.id
 
 	var view = target_player.get_public_view(my_viewer_id)
-	var can_see_all = (view.cash != -1) # 透過回傳值判斷是否有權限看到明細
+	var bb_mode = 0
+	if pm.has_node("/root/SettingsManager"):
+		bb_mode = pm.get_node("/root/SettingsManager").current.blackbox_mode
 	
 	# 刷新大頭貼
 	if avatar_rect and view.avatar != "":
 		avatar_rect.texture = ResourceManager.load_image_with_fallback(view.avatar)
 	
 	# 1. 刷新財力
-	if can_see_all:
+	if view.cash != -1:
 		cash_label.text = "現金: $%d" % view.cash
-		deposit_label.text = "存款: $%d" % view.deposit
-		points_label.text = "點數: %d P" % view.points
 	else:
 		cash_label.text = "現金: ???"
+	if view.deposit != -1:
+		deposit_label.text = "存款: $%d" % view.deposit
+	else:
 		deposit_label.text = "存款: ???"
+	if view.points != -1:
+		points_label.text = "點數: %d P" % view.points
+	else:
 		points_label.text = "點數: ???"
-		
-	net_worth_label.text = "總資產: 估計約 $%d" % view.net_worth
-		
-	# 2. 刷新地產表格 (Tree)
+
 	property_list.clear()
 	var root = property_list.create_item() # 隱藏的根節點
-	
-	if can_see_all:
+
+	if view.properties_detail.size() > 0:
 		for prop_data in view.properties_detail:
 			_add_property_row(root, [prop_data["name"], str(prop_data["level"]), str(prop_data["value"]), str(prop_data["toll"])])
-	else:
+	elif view.properties_count == -1:
+		_add_property_row(root, ["擁有地產數量未知", "???", "???", "???"])
+	elif view.properties_count > 0:
 		_add_property_row(root, ["未知地產 x %d" % view.properties_count, "???", "???", "???"])
-		
+	else:
+		_add_property_row(root, ["(無地產)", "", "", ""])
+
 	# 3. 刷新道具圖片 (GridContainer)
 	_clear_container(item_list)
-	if can_see_all:
+	if view.items_detail.size() > 0:
 		for item_name in view.items_detail:
 			_add_item_icon(item_list, item_name)
-	else:
+	elif view.items_count == -1:
+		var unknown_label = Label.new()
+		unknown_label.text = "道具數量未知"
+		item_list.add_child(unknown_label)
+	elif view.items_count > 0:
 		var unknown_label = Label.new()
 		unknown_label.text = "未知道具/卡片 x %d" % view.items_count
 		item_list.add_child(unknown_label)
-		
+	else:
+		var empty_label = Label.new()
+		empty_label.text = "(無道具)"
+		item_list.add_child(empty_label)
+
 	# 4. 刷新狀態
 	_clear_container(buff_container)
 	_add_list_item(buff_container, "無異常狀態")

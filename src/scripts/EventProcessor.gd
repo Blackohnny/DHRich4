@@ -51,7 +51,7 @@ func _execute_single_command(cmd_data: Dictionary, trigger_player: PlayerData) -
 				p.add_cash(amount)
 				DebugLogger.log_msg("事件效果：[%s] 獲得 $%d" % [p.name, amount], true)
 			"deduct_cash":
-				p.deduct_cash(amount)
+				p.deduct_cash(amount, true) # 事件扣款皆為強制
 				DebugLogger.log_msg("事件效果：[%s] 失去 $%d" % [p.name, amount], true)
 			"deduct_points":
 				p._points -= amount # 簡單扣點數，可以考慮在 PlayerData 加 deduct_points()

@@ -60,6 +60,10 @@ func _init(_id: int, _name: String, _avatar: String, _is_ai: bool = false) -> vo
 # 任何外部系統 (UI 或 AI 對手) 想探查此玩家情報，必須透過此 API
 # ---------------------------------------------------------
 func get_public_view(viewer_id: int) -> Dictionary:
+	var bb_mode = 0 # 0: OFF, 1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3
+	var sm = Engine.get_main_loop().current_scene.get_node_or_null("/root/SettingsManager")
+	if sm != null:
+		bb_mode = sm.current.blackbox_mode
 	var can_see_all = (viewer_id == self.id)
 
 	# 計算公開的估計總資產 (暫時寫死房地產價值 2500)
@@ -69,7 +73,7 @@ func get_public_view(viewer_id: int) -> Dictionary:
 	
 	# 將 _items 的資料萃取出來傳遞給 UI，避免直接把 Resource 丟出去
 	var items_view: Array[Dictionary] = []
-	if can_see_all:
+	if can_see_all or bb_mode < 2:
 		for item in _items:
 			items_view.append({
 				"id": item.id,
@@ -80,23 +84,28 @@ func get_public_view(viewer_id: int) -> Dictionary:
 				"icon": item.icon # UI 需要 icon 顯示
 			})
 
+
+
+	# 根據 BlackBox 等級決定是否隱藏數值
+	var show_cash = can_see_all or bb_mode < 1
+	var show_items_count = can_see_all or bb_mode < 2
+	var show_props_count = can_see_all or bb_mode < 3
+
 	return {
 		"id": self.id,
 		"name": self.name,
 		"avatar": self.avatar_filename,
 		"net_worth": estimated_net_worth,
 
-		# 敏感數值：無權限則回傳 -1 代表未知
-		"cash": _cash if can_see_all else -1,
-		"deposit": _deposit if can_see_all else -1,
-		"points": _points if can_see_all else -1,
+		"cash": _cash if show_cash else -1,
+		"deposit": _deposit if show_cash else -1,
+		"points": _points if show_cash else -1,
 
-		# 道具與地產：無權限則只給數量，不給明細
-		"items_count": _items.size(),
-		"items_detail": items_view if can_see_all else [],
+		"items_count": _items.size() if show_items_count else -1,
+		"items_detail": items_view if (can_see_all or bb_mode < 2) else [],
 
-		"properties_count": _properties.size(),
-		"properties_detail": _get_properties_detail_view() if can_see_all else []
+		"properties_count": _properties.size() if show_props_count else -1,
+		"properties_detail": _get_properties_detail_view() if (can_see_all or bb_mode < 3) else []
 	}
 
 # ---------------------------------------------------------
@@ -106,16 +115,21 @@ func add_cash(amount: int) -> void:
 	_cash += amount
 	DebugLogger.log_msg("玩家 [%s] 獲得 $%d，目前現金: $%d" % [name, amount, _cash], true)
 
-func deduct_cash(amount: int) -> bool:
+func deduct_cash(amount: int, is_forced: bool = false) -> bool:
 	if _cash >= amount:
 		_cash -= amount
 		DebugLogger.log_msg("玩家 [%s] 失去 $%d，目前現金: $%d" % [name, amount, _cash], true)
 		return true
 	else:
-		# TODO: 破產或抵押邏輯
-		_cash = 0
-		DebugLogger.log_msg("玩家 [%s] 現金不足，宣告破產！" % name, true)
-		return false
+		if is_forced:
+			# 如果是強制扣款 (例如付過路費)，才宣告破產並歸零
+			_cash = 0
+			DebugLogger.log_msg("玩家 [%s] 現金不足以支付 $%d，宣告破產！" % [name, amount], true)
+			return false
+		else:
+			# 如果只是自願購買 (例如買地)，單純回傳失敗，不扣款也不破產
+			DebugLogger.log_msg("玩家 [%s] 嘗試花費 $%d，但現金不足！" % [name, amount], true)
+			return false
 
 
 # ---------------------------------------------------------

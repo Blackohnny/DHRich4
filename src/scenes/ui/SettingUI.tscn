@@ -149,6 +149,29 @@ layout_mode = 2
 left_text = "手動選擇"
 right_text = "系統隨機"
 
+
+[node name="BlackBoxRow" type="HBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel/BlackBoxRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "BlackBox 資訊遮蔽層級"
+
+[node name="BlackBoxOption" type="OptionButton" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents/RulesPanel/BlackBoxRow"]
+unique_name_in_owner = true
+layout_mode = 2
+item_count = 4
+selected = 0
+popup/item_0/text = "Off (無遮蔽)"
+popup/item_0/id = 0
+popup/item_1/text = "Level 1 (隱藏現金)"
+popup/item_1/id = 1
+popup/item_2/text = "Level 2 (隱藏道具數量)"
+popup/item_2/id = 2
+popup/item_3/text = "Level 3 (隱藏地產數量)"
+popup/item_3/id = 3
 [node name="DisplayPanel" type="VBoxContainer" parent="CenterContainer/WindowPanel/MarginContainer/VBoxContainer/Content/TabContents"]
 unique_name_in_owner = true
 visible = false

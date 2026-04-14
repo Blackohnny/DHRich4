@@ -494,7 +494,7 @@ func _landing_land_event(cell: CellData) -> void:
 				# 真人決策：彈出單選視窗 (強迫繳費)
 				await show_dialog("支付過路費", msg, false, "繳納 ($%d)" % current_toll)
 			
-			current_data.deduct_cash(current_toll)
+			current_data.deduct_cash(current_toll, true)
 			if owner_data: owner_data.add_cash(current_toll)
 		
 		# --- 自己的地 ---

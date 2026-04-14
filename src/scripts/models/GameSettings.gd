@@ -23,3 +23,8 @@ enum MoveSpeed { NORMAL, FAST, INSTANT }
 @export_group("AI", "ai_")
 ## 啟用 AI 命運之神對話
 @export var ai_enabled: bool = true
+
+@export_group("BlackBox", "blackbox_")
+enum BlackBoxMode { OFF, LEVEL_1, LEVEL_2, LEVEL_3 }
+## 黑箱系統遮蔽層級
+@export var blackbox_mode: BlackBoxMode = BlackBoxMode.OFF

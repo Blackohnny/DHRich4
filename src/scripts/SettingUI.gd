@@ -19,6 +19,7 @@ class_name SettingUI
 @onready var branch_mode_switch: SegmentedSwitch = %BranchModeSwitch
 @onready var move_speed_option: OptionButton = %MoveSpeedOption
 @onready var ai_toggle_switch: SegmentedSwitch = %AIToggleSwitch
+@onready var blackbox_option: OptionButton = %BlackBoxOption
 
 func _ready() -> void:
 	# 綁定頁籤切換事件
@@ -35,6 +36,7 @@ func _ready() -> void:
 	branch_mode_switch.option_selected.connect(_on_branch_mode_selected)
 	move_speed_option.item_selected.connect(_on_move_speed_selected)
 	ai_toggle_switch.option_selected.connect(_on_ai_toggle_selected)
+	blackbox_option.item_selected.connect(_on_blackbox_selected)
 	
 	# 初始化：讀取目前全域設定並套用至 UI
 	_load_current_settings()
@@ -65,6 +67,9 @@ func _load_current_settings() -> void:
 		ai_toggle_switch.selected_index = 0
 	else:
 		ai_toggle_switch.selected_index = 1
+
+	# 更新黑箱系統
+	blackbox_option.select(settings.blackbox_mode)
 
 func _switch_tab(target_panel: Control) -> void:
 	# 隱藏所有面板
@@ -104,3 +109,7 @@ func _on_ai_toggle_selected(index: int) -> void:
 func _on_close_btn_pressed() -> void:
 	SettingsManager.save_settings() # 觸發全域廣播
 	queue_free()
+
+func _on_blackbox_selected(index: int) -> void:
+	SettingsManager.current.blackbox_mode = index as GameSettings.BlackBoxMode
+	DebugLogger.log_msg("🔧 設定已變更: BlackBox 遮蔽層級 -> " + str(index))
