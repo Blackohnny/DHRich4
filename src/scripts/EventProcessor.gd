@@ -1,5 +1,23 @@
 extends Node
 
+var default_events: Dictionary = {}
+
+func _ready() -> void:
+	_load_and_validate_default_events()
+
+func _load_and_validate_default_events() -> void:
+	var path = "res://data/events_default.json"
+	var file = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		DebugLogger.log_msg("[ERROR] EventProcessor 無法讀取預設事件庫: " + path)
+		return
+	var json_data = JSON.parse_string(file.get_as_text())
+	if json_data == null:
+		DebugLogger.log_msg("[ERROR] EventProcessor 解析 JSON 失敗: " + path)
+		return
+	default_events = json_data
+
+
 ## 根據卡片資料 (Dictionary) 解析並執行指令陣列
 func execute_card(card_data: Dictionary, trigger_player: PlayerData) -> void:
 	if not card_data.has("effects"):

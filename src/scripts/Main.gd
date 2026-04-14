@@ -1,4 +1,5 @@
 extends Node2D
+class_name MainController
 
 # 遊戲狀態列舉 (State Machine)
 enum GameState {
@@ -59,7 +60,7 @@ func _process(_delta: float) -> void:
 	# 狀態機：只有在 WAITING_ROLL 狀態才能擲骰子
 	if current_state == GameState.WAITING_ROLL:
 		# TODO: 判斷現在是不是真人玩家的回合
-		var current_data = PlayerManager.get_current_turn_player()
+		var current_data = get_node("/root/PlayerManager").get_current_turn_player()
 		if current_data != null and not current_data.is_ai:
 			if Input.is_action_just_pressed("ui_accept"):
 				_roll_dice_and_move()
@@ -311,7 +312,7 @@ func _process_next_step() -> void:
 		_execute_move_step(target_index)
 	else:
 		# 遇到岔路
-		var current_data = PlayerManager.get_current_turn_player()
+		var current_data = get_node("/root/PlayerManager").get_current_turn_player()
 		
 		if current_data.is_ai or SettingsManager.current.rule_branch_selection_mode == GameSettings.BranchSelectionMode.RANDOM:
 			# AI 或是 全域設定為隨機選擇
@@ -435,7 +436,7 @@ func _handle_cell_event(cell_index: int) -> void:
 # ---------------------------------------------------------
 
 func _passing_start_event(cell: CellData) -> void:
-	var current_data = PlayerManager.get_current_turn_player()
+	var current_data = get_node("/root/PlayerManager").get_current_turn_player()
 	if cell is StartCellData:
 		var start_cell = cell as StartCellData
 		current_data.add_cash(start_cell.salary_amount)
@@ -446,33 +447,121 @@ func _landing_start_event(_cell: CellData) -> void:
 	DebugLogger.log_msg("停在起點上。休息一回合。", true)
 	_end_turn()
 
-func _landing_land_event(cell: CellData) -> void:
-	var current_data = PlayerManager.get_current_turn_player()
+const CONFIRM_DIALOG_SCENE = preload("res://scenes/ui/components/ConfirmDialog.tscn")
+
+func _show_dialog(title: String, message: String, is_dual: bool = true, confirm_text: String = "確認", cancel_text: String = "取消") -> bool:
+	var dialog = CONFIRM_DIALOG_SCENE.instantiate() as ConfirmDialogUI
+	$UI.add_child(dialog) # 加在 UI 節點下以確保在最上層
+	dialog.setup(title, message, is_dual, confirm_text, cancel_text)
 	
+	# 使用 await 等待 signal 發出
+	var result: bool = await dialog.dialog_resolved
+	return result
+
+func _landing_land_event(cell: CellData) -> void:
+	var current_data = get_node("/root/PlayerManager").get_current_turn_player()
+	
+	# 切換狀態，避免玩家在等待對話框時做其他事 (但依然可以開 StatusUI)
+	current_state = GameState.EVENT_HANDLING
+
 	if cell is LandCellData:
 		var land = cell as LandCellData
 		if land.owner_id == -1:
-			# 無主地，處理購買邏輯 (先用 Auto-buy 測試)
-			DebugLogger.log_msg("踩到無主地 [%s]，售價 $%d，自動購買測試..." % [land.name, land.price])
-			if current_data.deduct_cash(land.price):
-				land.owner_id = current_data.id
-				DebugLogger.log_msg("購買成功！[%s] 擁有者變為玩家 %d" % [land.name, current_data.id])
+			# 無主地
+			var msg = "踩到無主空地！\n名稱：[%s]\n售價：$%d\n您目前的現金：$%d\n是否要購買？" % [land.name, land.price, current_data._cash]
+			if current_data.is_ai:
+				# AI 決策：有錢就買 (暫定)
+				if current_data._cash >= land.price:
+					current_data.deduct_cash(land.price)
+					land.owner_id = current_data.id
+					current_data.add_property(land)
+					_check_monopoly(land.district_id, current_data.id)
+					DebugLogger.log_msg("AI 自動購買成功！[%s]" % land.name)
 			else:
-				DebugLogger.log_msg("錢不夠，無法購買 [%s]！" % land.name)
+				# 真人決策：彈出雙選視窗
+				var want_to_buy = await _show_dialog("購買土地", msg, true, "購買 ($%d)" % land.price, "放棄")
+				if want_to_buy:
+					if current_data.deduct_cash(land.price):
+						land.owner_id = current_data.id
+						current_data.add_property(land)
+						_check_monopoly(land.district_id, current_data.id)
+						DebugLogger.log_msg("購買成功！[%s] 擁有者變為玩家 %d" % [land.name, current_data.id])
+					else:
+						await _show_dialog("餘額不足", "您的現金不夠購買這塊地！", false, "確定")
+		
 		elif land.owner_id != current_data.id:
-			# 別人的地，處理付過路費邏輯
-			var owner_data = PlayerManager.get_player(land.owner_id)
-			DebugLogger.log_msg("踩到別人的地 [%s]，需支付過路費 $%d！" % [land.name, land.base_toll])
-			if current_data.deduct_cash(land.base_toll) and owner_data != null:
-				owner_data.add_cash(land.base_toll)
+			# 別人的地
+			var owner_data = get_node("/root/PlayerManager").get_player(land.owner_id)
+			var current_toll = land.get_current_toll()
+			var modifier = " (含區域連鎖翻倍!)" if land.is_monopoly else ""
+			
+			var msg = "您踩到了 [%s] 的地盤！\n地產名稱：[%s]\n必須支付過路費：$%d%s" % [owner_data.name, land.name, current_toll, modifier]
+			
+			if current_data.is_ai:
+				current_data.deduct_cash(current_toll)
+				if owner_data: owner_data.add_cash(current_toll)
+			else:
+				# 真人決策：彈出單選視窗 (強迫繳費)
+				await _show_dialog("支付過路費", msg, false, "繳納 ($%d)" % current_toll)
+				current_data.deduct_cash(current_toll)
+				if owner_data: owner_data.add_cash(current_toll)
+		
 		else:
 			# 自己的地
-			DebugLogger.log_msg("踩到自己的地 [%s]，歡迎回家！" % land.name)
+			var upgrade_cost = land.get_upgrade_cost()
+			if land.level >= 5:
+				if current_data.is_ai:
+					DebugLogger.log_msg("AI 踩到自己的地，已達最高等級。")
+				else:
+					await _show_dialog("歡迎回家", "您的地產 [%s] 已經達到最高等級 (5級)，無法再升級了！" % land.name, false, "確定")
+			else:
+				var msg = "歡迎回到自己的地產！\n名稱：[%s]\n目前等級：%d\n\n花費 $%d 升級房屋可以大幅提升過路費。\n是否要升級？" % [land.name, land.level, upgrade_cost]
+				
+				if current_data.is_ai:
+					# AI 決策：有錢就升級 (暫定)
+					if current_data._cash >= upgrade_cost:
+						current_data.deduct_cash(upgrade_cost)
+						land.level += 1
+				else:
+					# 真人決策：彈出雙選視窗
+					var want_to_upgrade = await _show_dialog("升級地產", msg, true, "升級 ($%d)" % upgrade_cost, "不需要")
+					if want_to_upgrade:
+						if current_data.deduct_cash(upgrade_cost):
+							land.level += 1
+							DebugLogger.log_msg("升級成功！[%s] 升為等級 %d，過路費提升為 $%d" % [land.name, land.level, land.get_current_toll()])
+						else:
+							await _show_dialog("餘額不足", "您的現金不夠升級這塊地！", false, "確定")
 	else:
 		DebugLogger.log_msg("[ERROR] 型別錯誤：格子宣稱是 LAND，但不是 LandCellData 實體！")
-	
+
 	await get_tree().create_timer(1.0).timeout 
 	_end_turn()
+
+func _check_monopoly(target_district: int, p_id: int) -> void:
+	if current_board == null: return
+	if target_district == 0: return # 0 是特殊或無所屬區
+	
+	# 收集該區的所有土地
+	var district_lands: Array[LandCellData] = []
+	for cell in current_board.cells:
+		if cell is LandCellData and (cell as LandCellData).district_id == target_district:
+			district_lands.append(cell as LandCellData)
+			
+	if district_lands.is_empty(): return
+	
+	# 檢查是否全被同一個人擁有
+	var is_all_owned = true
+	for land in district_lands:
+		if land.owner_id != p_id:
+			is_all_owned = false
+			break
+			
+	# 如果全包了，更新該區所有土地的 is_monopoly 狀態
+	if is_all_owned:
+		DebugLogger.log_msg("🏆 恭喜玩家 %d 達成 [%d 區] 的區域連鎖！該區過路費全面翻倍！" % [p_id, target_district], true)
+		for land in district_lands:
+			land.is_monopoly = true
+
 
 func _landing_chance_event(cell: CellData) -> void:
 	if cell is ChanceCellData:
@@ -500,10 +589,10 @@ func _trigger_traditional_destiny_event(destiny: DestinyCellData) -> void:
 	_draw_and_execute_card("destiny")
 
 func _draw_and_execute_card(category: String) -> void:
-	var current_data = PlayerManager.get_current_turn_player()
+	var current_data = get_node("/root/PlayerManager").get_current_turn_player()
 
 	# 從 EventProcessor 取出已經載入並驗證過的 JSON
-	var json_data = EventProcessor.default_events
+	var json_data = get_node("/root/EventProcessor").default_events
 	if json_data.is_empty() or not json_data.has(category):
 		DebugLogger.log_msg("[ERROR] 事件庫是空的或找不到類別: " + category)
 		_end_turn()
@@ -542,7 +631,7 @@ func _draw_and_execute_card(category: String) -> void:
 	await get_tree().create_timer(2.0).timeout
 
 	# 執行效果 (呼叫 EventProcessor)
-	EventProcessor.execute_card(selected_card, current_data)
+	get_node("/root/EventProcessor").execute_card(selected_card, current_data)
 
 	await get_tree().create_timer(1.0).timeout
 	_end_turn()
@@ -608,13 +697,13 @@ func on_inventory_item_used(item_data: ItemData) -> void:
 	
 	# 將道具的 effects 轉換為假卡片格式，丟給 EventProcessor 處理
 	var mock_card = {"effects": item_data.effects}
-	var current_player = PlayerManager.get_current_turn_player()
+	var current_player = get_node("/root/PlayerManager").get_current_turn_player()
 	
 	var processor = get_node_or_null("/root/EventProcessor")
 	if processor != null:
 		processor.execute_card(mock_card, current_player)
 	else:
-		EventProcessor.new().execute_card(mock_card, current_player)
+		DebugLogger.log_msg("[ERROR] 無法取得 EventProcessor")
 
 func open_remote_dice_ui() -> void:
 	# 暫時用作弊視窗的按鈕代替，這裡應該要彈出一個 1-6 的按鈕視窗

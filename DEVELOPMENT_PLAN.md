@@ -1,3 +1,9 @@
+### 📝 通用對話框與事件中斷 (Generic Dialog & Event Interrupt)
+在實作土地購買、升級，以及未來的「被動道具 (如免費卡)」時，我們需要一個非阻塞式的通用對話框 (Generic Dialog)。
+*   **設計目標**: 
+    1.  **非阻塞 (Non-blocking)**: 對話框彈出時，遊戲主迴圈 (`Main.gd`) 必須 `await` 玩家的決定，但**不能鎖死 UI**。玩家必須能自由切換到 `StatusUI` 查看自己或對手的資產，或打開 `Map` 查看地圖，然後再回來做決定。
+    2.  **通用性 (Genericity)**: 支援「單選 (確認/關閉)」(例如：付過路費) 與「雙選 (是/否)」(例如：是否花 $1000 買地)。
+    3.  **狀態機整合**: 在對話框開啟期間，`Main.gd` 的狀態機應處於 `EVENT_HANDLING`，防止玩家在此時再次擲骰子。
 # DHRich4 - AI 驅動大富翁 開發計畫 (Development Plan)
 
 ## 專案概述 (Project Overview)

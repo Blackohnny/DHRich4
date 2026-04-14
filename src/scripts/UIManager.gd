@@ -24,24 +24,25 @@ func _process(_delta: float) -> void:
 	_update_buttons_state()
 
 func _update_buttons_state() -> void:
-	var can_interact = false
-	
-	var main = get_tree().current_scene # Main.tscn 是主場景
+	var can_open_all = false
+	var can_open_status_only = false
+
+	var main = get_tree().current_scene
 	var pm = get_node_or_null("/root/PlayerManager")
-	
-	# 確認主場景有 current_state 變數 (防呆，確保我們抓到的是大富翁控制器)
+
 	if main != null and "current_state" in main and pm != null:
-		# 只有在「等待擲骰子」(0) 且「輪到真人玩家」時，才允許操作右側選單
-		if main.current_state == 0: # GameState.WAITING_ROLL 的 Enum 值是 0
-			var current_player = pm.get_current_turn_player()
-			if current_player != null and not current_player.is_ai:
-				can_interact = true
-				
+		var current_player = pm.get_current_turn_player()
+		if current_player != null and not current_player.is_ai:
+				if main.current_state == MainController.GameState.WAITING_ROLL:
+					can_open_all = true
+				elif main.current_state == MainController.GameState.EVENT_HANDLING:
+					can_open_status_only = true
+
 	# 同步設定按鈕的可用狀態
-	if settings_btn: settings_btn.disabled = not can_interact
-	if status_btn: status_btn.disabled = not can_interact
-	if inventory_btn: inventory_btn.disabled = not can_interact
-	if map_btn: map_btn.disabled = not can_interact
+	if settings_btn: settings_btn.disabled = not (can_open_all or can_open_status_only)
+	if status_btn: status_btn.disabled = not (can_open_all or can_open_status_only)
+	if inventory_btn: inventory_btn.disabled = not can_open_all
+	if map_btn: map_btn.disabled = not (can_open_all or can_open_status_only)
 
 # --- 按鈕事件處理 ---
 func _on_settings_pressed() -> void:

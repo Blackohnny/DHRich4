@@ -17,7 +17,7 @@ var _deposit: int = 500
 var _points: int = 150
 
 # --- 影響力與道具 (未來擴充) ---
-var _properties: Array = [] # 持有的地產 ID 或參考
+var _properties: Array[LandCellData] = [] # 玩家擁有的地產
 # 將 _items 改為存放 ItemData 資源的 Array (確保強型別)
 var _items: Array[ItemData] = []
 
@@ -50,7 +50,9 @@ func get_public_view(viewer_id: int) -> Dictionary:
 	var can_see_all = (viewer_id == self.id)
 
 	# 計算公開的估計總資產 (暫時寫死房地產價值 2500)
-	var estimated_net_worth = _cash + _deposit + 2500
+	var estimated_net_worth = _cash + _deposit
+	for prop in _properties:
+		estimated_net_worth += prop.get_total_value()
 	
 	# 將 _items 的資料萃取出來傳遞給 UI，避免直接把 Resource 丟出去
 	var items_view: Array[Dictionary] = []
@@ -80,11 +82,8 @@ func get_public_view(viewer_id: int) -> Dictionary:
 		"items_count": _items.size(),
 		"items_detail": items_view if can_see_all else [],
 
-		"properties_count": _properties.size() + 2, # 測試假資料 2筆
-		"properties_detail": [
-			["台北 101", "2", "$5000", "$1500"],
-			["高雄 85大樓", "1", "$2500", "$800"]
-		] if can_see_all else []
+		"properties_count": _properties.size(),
+		"properties_detail": _get_properties_detail_view() if can_see_all else []
 	}
 
 # ---------------------------------------------------------
@@ -104,6 +103,30 @@ func deduct_cash(amount: int) -> bool:
 		_cash = 0
 		DebugLogger.log_msg("玩家 [%s] 現金不足，宣告破產！" % name, true)
 		return false
+
+
+# ---------------------------------------------------------
+# 地產增刪 API (Model)
+# ---------------------------------------------------------
+func add_property(land: LandCellData) -> void:
+	if land and not _properties.has(land):
+		_properties.append(land)
+
+func remove_property(land: LandCellData) -> void:
+	if land and _properties.has(land):
+		_properties.erase(land)
+
+# 將地產陣列轉換為 StatusUI 所需的 Dictionary 格式
+func _get_properties_detail_view() -> Array[Dictionary]:
+	var view: Array[Dictionary] = []
+	for p in _properties:
+		view.append({
+			"name": p.name,
+			"level": p.level,
+			"value": p.get_total_value(),
+			"toll": p.get_current_toll()
+		})
+	return view
 
 # 道具增刪 API，直接接收 ItemData
 func add_item(item: ItemData) -> void:

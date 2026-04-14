@@ -123,7 +123,7 @@ func _refresh_ui_for_player(player_id: int) -> void:
 	
 	if can_see_all:
 		for prop_data in view.properties_detail:
-			_add_property_row(root, prop_data)
+			_add_property_row(root, [prop_data["name"], str(prop_data["level"]), str(prop_data["value"]), str(prop_data["toll"])])
 	else:
 		_add_property_row(root, ["未知地產 x %d" % view.properties_count, "???", "???", "???"])
 		
@@ -159,8 +159,9 @@ func _add_property_row(root: TreeItem, columns_data: Array) -> void:
 		item.set_text(i, columns_data[i])
 
 # 新增道具圖片按鈕
-func _add_item_icon(container: GridContainer, item_name: String) -> void:
+func _add_item_icon(container: GridContainer, item_data: Dictionary) -> void:
 	var btn = Button.new()
 	btn.custom_minimum_size = Vector2(80, 80)
-	btn.text = item_name # TODO: 未來換成 btn.icon = load("res://...png")
+	btn.text = item_data["name"]
+	# TODO: 之後有需要可以在這裡設定 btn.icon = item_data["icon"]
 	container.add_child(btn)
