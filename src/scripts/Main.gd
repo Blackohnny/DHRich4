@@ -18,6 +18,9 @@ var remaining_steps: int = 0
 # 目前畫面上所有棋子的陣列 (Index 對應 player_id)
 var player_entities: Array[PlayerEntity] = []
 
+# 快取所有格子的 Node2D，方便後續更新 Icon 與外觀
+var cell_icon_nodes: Array[Node2D] = []
+
 # 目前正在行動的棋子 (快取)
 var active_player_entity: PlayerEntity
 
@@ -131,6 +134,16 @@ func _init_board() -> void:
 		DebugLogger.log_msg("成功載入專案預設地圖 (8字形)！")
 	else:
 		DebugLogger.log_msg("成功載入外部關卡地圖資源！")
+		
+	# --- 套用地圖專屬視角 (Dynamic Camera View) ---
+	var cam: Camera2D = get_node_or_null("Camera2D")
+	if cam != null:
+		if current_board.initial_camera_pos != Vector2.ZERO:
+			cam.position = current_board.initial_camera_pos
+			DebugLogger.log_msg("套用地圖專屬鏡頭位置: " + str(cam.position))
+		if current_board.initial_camera_zoom != Vector2.ZERO:
+			cam.zoom = current_board.initial_camera_zoom
+			DebugLogger.log_msg("套用地圖專屬縮放比例: " + str(cam.zoom))
 
 	# --- 印出地圖的全域與格子參數 ---
 	DebugLogger.log_msg("====== 地圖環境參數 ======")
@@ -193,6 +206,144 @@ func _draw_board_cells() -> void:
 		label.text = str(i)
 		label.position = Vector2(-10, -10) # 微調文字置中
 		cell.add_child(label)
+		
+		# --- 動態產生格子的專屬圖標節點 (IconNode) ---
+		var icon_node = Node2D.new()
+		icon_node.name = "IconNode"
+		# ★ 關鍵解法：將 IconNode 從 cell(Sprite2D) 中抽離出來，直接作為 board_node 的子節點！
+		# 因為 cell 先前已經被大幅度縮小 (scale) 處理過，如果 IconNode 是它的子節點，
+		# 裡面的所有 UI、字體、圈圈大小都會繼承那個極小的縮放比例，導致肉眼看不見！
+		# 解法：改用世界絕對座標 (格子位置 + 偏移量)，並保持 1:1 的縮放比例 (scale = 1.0)
+		icon_node.position = cell_data.position + cell_data.icon_offset
+		# ★ 統一塗層管理：利用 ZLayer enum 確保圖示顯示在格子上層
+		icon_node.z_index = ZLayer.CELL_ICON
+		icon_node.z_as_relative = false # 強制為全域絕對層級
+		board_node.add_child(icon_node)
+		cell_icon_nodes.append(icon_node)
+		
+		# (1) 建立所有格子通用的底層圈圈 (預設隱藏)
+		# 為了避免每次畫圖的麻煩，我們用一個 ColorRect 來代替，並設定為圓角
+		var bg_circle = ColorRect.new()
+		bg_circle.name = "BgCircle"
+		var circle_size = 70.0 # ★ 加大圈圈，配合格子視覺大小 80.0
+		bg_circle.size = Vector2(circle_size, circle_size)
+		# 將原點定在中心
+		bg_circle.position = Vector2(-circle_size/2, -circle_size/2)
+		# 利用 StyleBoxFlat 做圓角，讓他看起來像個圈圈
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color(1.0, 1.0, 1.0, 1.0) # 顏色之後會被 modulate 覆蓋
+		style.corner_radius_top_left = int(circle_size/2)
+		style.corner_radius_top_right = int(circle_size/2)
+		style.corner_radius_bottom_left = int(circle_size/2)
+		style.corner_radius_bottom_right = int(circle_size/2)
+		# 套用 StyleBox (不過 ColorRect 不能直接套 stylebox, 所以改用 Panel)
+		# 改用 Panel
+		bg_circle.free() # 刪掉剛剛建的 ColorRect
+		var bg_panel = Panel.new()
+		bg_panel.name = "BgCircle"
+		bg_panel.size = Vector2(circle_size, circle_size)
+		bg_panel.position = Vector2(-circle_size/2, -circle_size/2)
+		bg_panel.add_theme_stylebox_override("panel", style)
+		bg_panel.hide() # 預設不顯示圈圈
+		icon_node.add_child(bg_panel)
+		
+		# (2) 建立 Owner 字樣 (例如 P1)
+		var owner_label = Label.new()
+		owner_label.name = "OwnerLabel"
+		owner_label.text = ""
+		owner_label.add_theme_font_size_override("font_size", 20) # ★ 加大文字
+		owner_label.add_theme_color_override("font_color", Color.WHITE)
+		owner_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		owner_label.add_theme_constant_override("outline_size", 3) # ★ 加粗外框
+		owner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		owner_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		# 必須加上 custom_minimum_size，Godot 才能在腳本動態生成時正確分配空間
+		owner_label.custom_minimum_size = Vector2(circle_size, circle_size)
+		owner_label.position = Vector2(-circle_size/2, -circle_size/2 + 20) # ★ P1 往下移一點
+		icon_node.add_child(owner_label)
+		
+		# (3) 建立頂層的 Emoji 標籤 (例如 🏠, 🏪, ❓)
+		var top_label = Label.new()
+		top_label.name = "TopLabel"
+		top_label.add_theme_font_size_override("font_size", 48) # ★ 大幅加大 Emoji
+		# 給予最小空間並置中，才不會因為字體大小被剪裁或擠壓到消失
+		top_label.custom_minimum_size = Vector2(70, 70) # ★ 對應圈圈大小
+		top_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		top_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		# 稍微往上抬一點，不要被圈圈完全蓋住
+		top_label.position = Vector2(-35, -50) # ★ 重新調整 Emoji 置中並微偏上
+		icon_node.add_child(top_label)
+
+		# 根據格子類型初始化預設 Emoji
+		if cell_data is StartCellData:
+			top_label.text = "🚩"
+		elif cell_data is ChanceCellData:
+			top_label.text = "❓"
+		elif cell_data is DestinyCellData:
+			top_label.text = "💀"
+		elif cell_data is MinigameCellData:
+			top_label.text = "🎮"
+		elif cell_data is ShopCellData:
+			top_label.text = "🏪"
+		elif cell_data is LandCellData:
+			top_label.text = "🪧" # Sell 牌
+			
+	# 初始畫完後，強制更新一次所有 LandCellData 的狀態
+	# (用來處理如果一開始就有設定 owner 的情況，或是讀取存檔時)
+	for i in range(current_board.cells.size()):
+		update_cell_visual(i)
+
+
+# --- 負責更新單一格子外觀 (MVC View Update) ---
+func update_cell_visual(cell_index: int) -> void:
+	if cell_index < 0 or cell_index >= current_board.cells.size() or cell_index >= cell_icon_nodes.size():
+		return
+		
+	var cell_data = current_board.cells[cell_index]
+	var icon_node = cell_icon_nodes[cell_index]
+	
+	var bg_circle = icon_node.get_node("BgCircle") as Panel
+	var owner_label = icon_node.get_node("OwnerLabel") as Label
+	var top_label = icon_node.get_node("TopLabel") as Label
+	
+	if cell_data is LandCellData:
+		var land = cell_data as LandCellData
+		if land.owner_id == -1:
+			# 無主地
+			bg_circle.hide()
+			owner_label.text = ""
+			top_label.text = "🪧"
+		else:
+			# 有人擁有
+			bg_circle.show()
+			owner_label.text = "P" + str(land.owner_id + 1)
+			
+			# 根據玩家 ID 設定圈圈顏色
+			var player_colors = [
+				Color(0.2, 0.6, 1.0, 0.9), # P1: 藍色
+				Color(1.0, 0.3, 0.3, 0.9), # P2: 紅色
+				Color(0.3, 0.8, 0.3, 0.9), # P3: 綠色
+				Color(0.9, 0.7, 0.1, 0.9)  # P4: 黃色
+			]
+			var c_idx = land.owner_id % player_colors.size()
+			bg_circle.modulate = player_colors[c_idx]
+			
+			# 如果是連鎖 (Monopoly)，讓圈圈發光或是變稍微大一點
+			if land.is_monopoly:
+				bg_circle.scale = Vector2(1.2, 1.2)
+			else:
+				bg_circle.scale = Vector2(1.0, 1.0)
+			
+			# 根據等級設定房屋圖示
+			if land.level == 0: top_label.text = "🪧" # 理論上不該發生 (買了就是LV1)
+			elif land.level == 1: top_label.text = "⛺"
+			elif land.level == 2: top_label.text = "🏠"
+			elif land.level == 3: top_label.text = "🏡"
+			elif land.level == 4: top_label.text = "🏢"
+			elif land.level >= 5: top_label.text = "🏰"
+	else:
+		# 其他類型的格子目前不需要隨事件變動外觀，保持 _draw_board_cells 的初始化即可
+		pass
 
 # --- 作弊與除錯 API ---
 func force_set_player_count(count: int) -> void:
@@ -415,7 +566,7 @@ func _handle_cell_event(cell_index: int) -> void:
 	if current_cell is StartCellData:
 		_landing_start_event(current_cell)
 	elif current_cell is LandCellData:
-		_landing_land_event(current_cell)
+		_landing_land_event(current_cell, cell_index)
 	elif current_cell is ChanceCellData:
 		_landing_chance_event(current_cell)
 	elif current_cell is DestinyCellData:
@@ -458,7 +609,7 @@ func show_dialog(title: String, message: String, is_dual: bool = true, confirm_t
 	var result: bool = await dialog.dialog_resolved
 	return result
 
-func _landing_land_event(cell: CellData) -> void:
+func _landing_land_event(cell: CellData, cell_index: int) -> void:
 	var current_data = get_node("/root/PlayerManager").get_current_turn_player()
 	
 	# 切換狀態，避免玩家在等待對話框時做其他事
@@ -473,8 +624,10 @@ func _landing_land_event(cell: CellData) -> void:
 			if want_to_buy:
 				if current_data.deduct_cash(land.price):
 					land.owner_id = current_data.id
+					land.level = 1 # 買下即為 1 級 (⛺)
 					current_data.add_property(land)
 					_check_monopoly(land.district_id, current_data.id)
+					update_cell_visual(cell_index) # 更新視覺
 					if current_data.brain is HumanBrain:
 						DebugLogger.log_msg("購買成功！[%s] 擁有者變為玩家 %d" % [land.name, current_data.id])
 					else:
@@ -510,12 +663,14 @@ func _landing_land_event(cell: CellData) -> void:
 				if want_to_upgrade:
 					if current_data.deduct_cash(upgrade_cost):
 						land.level += 1
+						update_cell_visual(cell_index) # 更新視覺
 						if current_data.brain is HumanBrain:
 							DebugLogger.log_msg("升級成功！[%s] 升為等級 %d，過路費提升為 $%d" % [land.name, land.level, land.get_current_toll()])
 						else:
 							DebugLogger.log_msg("AI 升級成功！[%s] 等級 %d" % [land.name, land.level])
 					elif current_data.brain is HumanBrain:
 						await show_dialog("餘額不足", "您的現金不夠升級這塊地！", false, "確定")
+
 	else:
 		DebugLogger.log_msg("[ERROR] 型別錯誤：格子宣稱是 LAND，但不是 LandCellData 實體！")
 

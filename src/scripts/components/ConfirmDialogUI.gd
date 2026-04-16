@@ -15,8 +15,8 @@ func _ready() -> void:
 	confirm_button.pressed.connect(_on_confirm)
 	cancel_button.pressed.connect(_on_cancel)
 	
-	# 對話框必須出現在最上層
-	z_index = 100
+	# 對話框必須出現在最上層 (統一塗層管理)
+	z_index = ZLayer.UI_OVERLAY
 
 ## 初始化對話框
 ## `is_dual_choice` 為 true 顯示「確認/取消」，為 false 只顯示「確定」

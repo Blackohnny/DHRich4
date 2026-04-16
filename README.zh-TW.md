@@ -30,6 +30,9 @@
         *   `Main.gd`: 遊戲的主狀態機 (State Machine)，控制回合輪替、骰子動畫排程，並作為地圖事件的分發器 (Event Dispatcher)。
         *   `UIManager.gd`: 負責接收主畫面點擊事件，並負責動態實例化 (Instantiate) `StatusUI` 彈出視窗。
         *   `Player.gd`: 掛載於 `PlayerEntity`，專職處理座標平移 (Tween) 與 Z-Index 視覺突顯。
+*   **全域圖層管理 (Z-Layer Management)**: 
+    *   為防止 UI 互相遮擋 (例如對話框被玩家蓋住，或房子被格子蓋住)，專案中所有節點的渲染層級皆由單一來源 `ZLayer.gd` (Enum) 嚴格控管。
+    *   圖層順序：`BOARD(0)` < `CELL_ICON(10)` < `PLAYER_INACTIVE(20)` < `PLAYER_ACTIVE(30)` < `UI_OVERLAY(100)`。
 *   **資源管理**: 
     *   實作動態載入與 Fallback 機制，隔離私有資源與開源資源。
     *   **地圖系統完全資料驅動**：捨棄硬編碼，使用 Godot Custom Resources (`.tres`) 建立有向圖 (Directed Graph) 地圖結構，支援 8 字形與岔路走訪。

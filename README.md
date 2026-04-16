@@ -29,6 +29,9 @@ This is an AI-driven, single-player Monopoly-style game side project that integr
         *   `Main.gd`: Houses the central State Machine, managing turn cycles, dice roll scheduling, and acting as the Event Dispatcher for cell landings.
         *   `UIManager.gd`: Handles primary screen clicks and dynamically instantiates UI popups like `StatusUI`.
         *   `Player.gd`: Attached to `PlayerEntity.tscn`, focused solely on position tweening and Z-Index highlighting.
+*   **Global Z-Layer Management**: 
+    *   To prevent UI overlapping issues (e.g., popups hidden behind players, or buildings hidden behind tiles), all rendering depths are strictly controlled by a single source of truth: the `ZLayer.gd` enum.
+    *   `BOARD(0)` < `CELL_ICON(10)` < `PLAYER_INACTIVE(20)` < `PLAYER_ACTIVE(30)` < `UI_OVERLAY(100)`.
 *   **Resource Management (Data-Driven)**: 
     *   Custom dynamic loading and Fallback mechanisms strictly isolate private (copyrighted) assets from open-source assets.
     *   **Data-Driven Board System**: Hardcoded generation is abandoned in favor of Godot Custom Resources (`.tres`). Maps are implemented as Directed Graphs to support figure-8 layouts and branching paths.

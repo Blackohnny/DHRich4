@@ -31,6 +31,8 @@ file_logging/log_path="res://logs/godot.log"
 
 [display]
 
+window/size/window_width_override=1280
+window/size/window_height_override=720
 window/subwindows/embed_subwindows=false
 
 [physics]

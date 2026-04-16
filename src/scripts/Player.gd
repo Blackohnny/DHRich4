@@ -57,11 +57,11 @@ func setup(id: int, start_index: int, board: BoardData, avatar_path: String) -> 
 func set_active_turn(is_active: bool) -> void:
 	if is_active:
 		# 讓正在行動的棋子跑到最上面，並且稍微變大一點或變亮
-		z_index = 10 
+		z_index = ZLayer.PLAYER_ACTIVE 
 		modulate = Color(1.2, 1.2, 1.2, 1.0) # 微發光
 	else:
-		# 休息中的棋子沉到底下
-		z_index = 0
+		# 休息中的棋子沉到底下，但依然在格子(BOARD)之上
+		z_index = ZLayer.PLAYER_INACTIVE
 		modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 # 執行單步移動 (非同步，被 Main 控制器呼叫並 await)

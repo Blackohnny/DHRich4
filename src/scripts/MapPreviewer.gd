@@ -106,3 +106,12 @@ func _draw() -> void:
 		var name_str: String = cell.name
 		var name_size: Vector2 = font.get_string_size(name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size - 2)
 		draw_string(font, pos + Vector2(-name_size.x/2, 15), name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size - 2, Color.LIGHT_GRAY)
+		
+		# --- 畫圖標/建築的預定地 (Icon Offset) ---
+		var icon_pos: Vector2 = pos + cell.icon_offset
+		# 畫一條虛線或實線連接格子中心與圖標位置
+		draw_line(pos, icon_pos, Color(1.0, 1.0, 1.0, 0.3), 1.0, true)
+		# 畫一個小圓點代表圖標中心
+		draw_circle(icon_pos, 4.0, Color(1.0, 0.8, 0.2, 0.8))
+		# 標示一下這是圖標區
+		draw_string(font, icon_pos + Vector2(5, -5), "[Icon]", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size - 4, Color(1.0, 0.8, 0.2, 0.8))

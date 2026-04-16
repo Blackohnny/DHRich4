@@ -111,6 +111,19 @@
     *   **解決非同步災難**: `Main.gd` 不需再處理「本地 AI 瞬間決定」與「連網 AI 等待 API」的複雜 `await` 分支，只需統一呼叫 `await player.brain.decide_buy_land()`。
     *   詳見 `docs/ai_architecture_strategy.md`。
 
+### 12. 全域圖層管理 (Z-Layer Management)
+*   **決策**: 捨棄在各腳本中寫死 `z_index` (魔術數字)，建立全域的 `ZLayer.gd` (enum) 來統一控管所有節點的前後覆蓋關係。
+*   **原因**: 
+    *   專案變大後，經常發生「對話框被玩家蓋住」或「房子被格子蓋住」的顯示 Bug。
+    *   統一管理後，圖層順序一目了然 (`BOARD(0)` < `CELL_ICON(10)` < `PLAYER_INACTIVE(20)` < `PLAYER_ACTIVE(30)` < `UI_OVERLAY(100)`)，開發新特效時只需調用 `ZLayer.` 即可，永遠不怕蓋錯。
+
+### 13. 獨立圖標座標與防縮放繼承 (Dynamic Icon Offset & Scale Prevention)
+*   **決策**: 在 `CellData` 導入獨立的 `icon_offset: Vector2` (相對偏移量)，並在 `Main.gd` 動態生成圖標節點 (`IconNode`) 時，將其作為 `board_node` 的子節點 (平級於格子)，而非格子的子節點。
+*   **原因**: 
+    *   **靈活的關卡設計**: 解決了大富翁環狀地圖「無方向性」的痛點。水平道路的房子可以長在上下，垂直道路可以長在左右，設計師能在 `.tres` 自由設定每格的 `icon_offset` 達成完美外圈排列。
+    *   **避開縮放災難 (Scale Inheritance)**: 格子背景 (`Sprite2D`) 經常因為原始圖片大小不一而必須強制縮放 (`scale` < 1.0)。若把動態生成的 UI (`Label`) 放進去當子節點，字體與圖案會繼承縮放而變成奈米大小。將其抽離為平級節點並使用絕對座標 (`cell_position + icon_offset`)，能保證 1:1 的完美解析度。
+*   **附帶視角優化**: 將 `initial_camera_pos` 與 `zoom` 寫入 `BoardData.tres` 達成 Data-Driven 視角，確保不同形狀的地圖載入時都能自動套用最棒的安全邊距 (Margin)。
+
 ---
 ## 🛠️ 階段開發藍圖 (Step-by-Step Roadmap)
 

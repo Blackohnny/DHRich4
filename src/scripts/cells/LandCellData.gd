@@ -19,8 +19,8 @@ var owner_id: int = -1 # -1: 無主, >0: 玩家 ID
 var level: int = 0     # 0: 空地, 1: 房子, 2: 飯店... 最大 5 級
 var is_monopoly: bool = false # 是否達成區域連鎖 (動態計算)
 
-func _init(_name: String = "未命名空地", _pos: Vector2 = Vector2.ZERO, _price: int = 1000, _base_toll: int = 200, _district: int = 0):
-	super(_name, _pos)
+func _init(_name: String = "未命名空地", _pos: Vector2 = Vector2.ZERO, _price: int = 1000, _base_toll: int = 200, _district: int = 0, _icon_offset: Vector2 = Vector2(0, -80)):
+	super(_name, _pos, _icon_offset)
 	self.price = _price
 	self.base_toll = _base_toll
 	self.district_id = _district

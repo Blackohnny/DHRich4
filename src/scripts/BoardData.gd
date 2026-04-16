@@ -23,6 +23,12 @@ class_name BoardData
 ## 壞命運機率權重：數值越高，抽到負面事件的機率越大 (預設 1.0)
 @export var bad_destiny_weight: float = 1.0
 
+@export_group("Map View & Camera")
+## 地圖載入時，攝影機的初始中心座標 (若為 Vector2.ZERO 則使用場景預設值)
+@export var initial_camera_pos: Vector2 = Vector2.ZERO
+## 地圖載入時，攝影機的初始縮放比例 (例如 Vector2(0.85, 0.85)，若為 Vector2.ZERO 則使用場景預設值 1.0)
+@export var initial_camera_zoom: Vector2 = Vector2.ZERO
+
 # ==============================================================================
 # 地圖拓樸結構 (Topology)
 # 定義格子的實際排列與屬性。
