@@ -65,6 +65,35 @@ func get_schema_prompt() -> String:
 
 	return prompt
 
+## 將效果字典轉為人類可讀的字串 (用於 UI 顯示)
+func get_effect_description(effect: Dictionary) -> String:
+	if not effect.has("cmd"):
+		return ""
+		
+	var cmd = effect.get("cmd", "")
+	# 強制轉型為 int，防止 AI 回傳 JSON 時將數字寫成字串 ("500" 而非 500)
+	var amount: int = int(effect.get("amount", 0))
+	var item_id = effect.get("item_id", "")
+	var target = effect.get("target", "self")
+	
+	var target_name = "你"
+	if target == "all": target_name = "所有人"
+	elif target == "others": target_name = "其他人"
+	
+	match cmd:
+		"add_cash": return "💰 %s獲得 $%d" % [target_name, amount]
+		"deduct_cash": return "💸 %s失去 $%d" % [target_name, amount]
+		"add_points": return "⭐ %s獲得 %d 點數" % [target_name, amount]
+		"deduct_points": return "📉 %s失去 %d 點數" % [target_name, amount]
+		"add_item": 
+			var item_name = item_id.replace("item_", "").capitalize()
+			return "🎁 %s獲得道具 [%s]" % [target_name, item_name]
+		"remove_item":
+			var item_name = item_id.replace("item_", "").capitalize()
+			return "🔥 %s被沒收道具 [%s]" % [target_name, item_name]
+		"transfer_cash": return "😈 從其他人身上偷取 $%d" % amount
+		_: return "神秘的效果發生了"
+
 # ==============================================================================
 
 func _ready() -> void:
@@ -102,8 +131,8 @@ func _execute_single_command(cmd_data: Dictionary, trigger_player: PlayerData) -
 
 	var cmd: String = cmd_data["cmd"]
 	var target_str: String = cmd_data["target"]
-	# amount 改為可選 (例如 remote_dice 不需要 amount)
-	var amount: float = cmd_data.get("amount", 0.0) 
+	# amount 改為可選 (例如 remote_dice 不需要 amount)，強制轉型防止 AI 回傳字串
+	var amount: float = float(cmd_data.get("amount", 0.0)) 
 	var item_id: String = cmd_data.get("item_id", "")
 
 	# 安全驗證：阻擋 AI 產生未知的指令

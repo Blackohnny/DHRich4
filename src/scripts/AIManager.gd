@@ -104,7 +104,158 @@ func is_ai_ready() -> bool:
 	return is_ready
 
 # ---------------------------------------------------------
-# AI 通訊核心 (Phase 5 測試用)
+# AI 命運之神對話核心 (Phase 5)
+# ---------------------------------------------------------
+
+signal destiny_response_received(response_data: Dictionary)
+signal destiny_error_occurred(error_msg: String)
+
+# 動態角色池 (Dynamic Personas)
+const PERSONAS: Array[Dictionary] = [
+	{
+		"name": "盜寶哥布林",
+		"personality": "極度貪婪、市儈、講話急躁、看到錢就眼睛發亮，喜歡嘲笑窮人。"
+	},
+	{
+		"name": "森林小妖精",
+		"personality": "天真無邪、喜歡惡作劇、講話像小孩子，對金錢沒什麼概念，但喜歡發送驚喜。"
+	},
+	{
+		"name": "深淵惡魔",
+		"personality": "威嚴、恐怖、講話緩慢且充滿壓迫感，喜歡給予人類殘酷的試煉或巨大的誘惑。"
+	},
+	{
+		"name": "溫和的大地女神",
+		"personality": "充滿母愛、語氣溫柔慈祥，總是鼓勵玩家，即使懲罰也是帶著『這是為了你好』的語氣。"
+	},
+	{
+		"name": "暴躁的火神",
+		"personality": "脾氣極差、很容易不耐煩、覺得人類很煩，動不動就想用火燒掉一切。"
+	},
+	{
+		"name": "神秘的流浪商人",
+		"personality": "語氣神祕、總是說話留一半、像是在推銷東西，但從來不強求。"
+	}
+]
+
+func get_random_persona() -> Dictionary:
+	return PERSONAS[randi() % PERSONAS.size()]
+
+## 發送命運之神對話請求
+## is_final_turn: 若為 true，會加上隱藏 prompt 強制 AI 輸出 JSON (包含 effects)
+func request_destiny_event(chat_history: Array, player_name: String, persona: Dictionary, is_final_turn: bool) -> void:
+	if not is_ready:
+		destiny_error_occurred.emit("AI 未連線，請檢查設定檔。")
+		return
+		
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	# 這裡不再綁定 test 的 callback，改綁正式的 callback
+	http_request.request_completed.connect(self._on_destiny_request_completed.bind(http_request, is_final_turn))
+
+	var headers = [
+		"Content-Type: application/json",
+		"Authorization: Bearer " + api_key
+	]
+
+	# 1. 建立 System Prompt (動態角色扮演)
+	var npc_name = persona.get("name", "神秘存在")
+	var npc_trait = persona.get("personality", "神祕")
+	
+	var system_prompt = "你是一個名為『%s』的虛擬角色，負責在大富翁遊戲中與玩家互動。\n" % npc_name
+	system_prompt += "【嚴格角色設定】你的個性是：%s\n" % npc_trait
+	system_prompt += "【嚴格規定】你是劇情 NPC，不是遊戲系統小幫手！絕對不要向玩家列出任何遊戲操作選項（例如：查詢狀態、擲骰子、購買土地等）。\n"
+	system_prompt += "目前的玩家是：[%s]。請根據你的角色設定，直接針對他來到你面前這件事給予回應。\n" % player_name
+	#system_prompt += "對話請保持簡短，限制在 50 字以內。\n"
+	
+	if is_final_turn:
+		system_prompt += "\n【強制指令：這是最後一回合】\n"
+		system_prompt += "請根據玩家剛才的態度進行最終裁決，並「嚴格」回傳以下格式的 JSON，不要包含任何額外廢話或 Markdown 標籤：\n"
+		system_prompt += "{\n"
+		system_prompt += "  \"dialog\": \"你的最後一句話（例如：放肆！扣你錢！）\",\n"
+		system_prompt += "  \"effects\": [ {\"cmd\": \"...\", \"target\": \"...\", ...} ]\n"
+		system_prompt += "}\n\n"
+		# 動態掛載我們剛才在 EventProcessor 寫好的 Schema
+		var processor = get_node_or_null("/root/EventProcessor")
+		if processor:
+			system_prompt += processor.get_schema_prompt()
+	
+	# 2. 組裝 Messages 陣列 (包含 System 提示與先前的聊天紀錄)
+	var messages = [{"role": "system", "content": system_prompt}]
+	messages.append_array(chat_history)
+	
+	var payload = {
+		"model": model_name,
+		"temperature": temperature if not is_final_turn else 0.2, # 決算回合降低溫度確保 JSON 穩定
+		"max_tokens": max_tokens,
+		"messages": messages,
+		"stream": false
+	}
+	
+	# 如果是決算回合，並且 API 支援，強制指定 response_format
+	if is_final_turn:
+		payload["response_format"] = { "type": "json_object" }
+
+	var json_payload = JSON.stringify(payload)
+	
+	# === [新增詳細 Log] 記錄打出去的完整 Payload ===
+	DebugLogger.log_msg("🚀 [AI Request] 準備發送 API 請求給模型: " + model_name)
+	if is_final_turn:
+		DebugLogger.log_msg("⚠️ 此回合為【最終決算回合 (JSON Schema)】")
+	DebugLogger.log_msg("發送的完整 Payload 內容:\n" + JSON.stringify(payload, "  "))
+	# ==========================================
+	
+	var err = http_request.request(api_endpoint, headers, HTTPClient.METHOD_POST, json_payload)
+
+	if err != OK:
+		DebugLogger.log_msg("[ERROR] Destiny HTTPRequest 發送失敗！錯誤碼: %d" % err)
+		destiny_error_occurred.emit("網路發送失敗。")
+		http_request.queue_free()
+
+func _on_destiny_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray, http_node: HTTPRequest, is_final_turn: bool) -> void:
+	http_node.queue_free()
+
+	if result != HTTPRequest.RESULT_SUCCESS:
+		destiny_error_occurred.emit("網路連線失敗。")
+		return
+
+	var response_text = body.get_string_from_utf8()
+
+	if response_code == 200:
+		var json = JSON.parse_string(response_text)
+		if typeof(json) == TYPE_DICTIONARY and json.has("choices"):
+			var ai_reply_str = json.choices[0].message.content
+			
+			# === [新增詳細 Log] 記錄 AI 回傳的原始內容 ===
+			DebugLogger.log_msg("📥 [AI Response] 收到模型回覆:")
+			DebugLogger.log_msg(ai_reply_str)
+			# ==========================================
+			
+			if is_final_turn:
+				# 決算回合：嘗試解析 AI 吐回來的 JSON
+				var effect_json = JSON.parse_string(ai_reply_str)
+				if effect_json != null and typeof(effect_json) == TYPE_DICTIONARY:
+					destiny_response_received.emit(effect_json)
+				else:
+					# 容錯處理：如果 AI 沒有乖乖吐 JSON，手動包裝一個無效果的 JSON
+					DebugLogger.log_msg("[WARNING] AI 未回傳標準 JSON: " + ai_reply_str)
+					destiny_response_received.emit({
+						"dialog": ai_reply_str,
+						"effects": []
+					})
+			else:
+				# 一般回合：只回傳文字
+				destiny_response_received.emit({
+					"dialog": ai_reply_str
+				})
+		else:
+			destiny_error_occurred.emit("AI 回傳格式異常。")
+	else:
+		DebugLogger.log_msg("[ERROR] 伺服器錯誤 %d: " % response_code + response_text)
+		destiny_error_occurred.emit("伺服器錯誤，代碼：" + str(response_code))
+
+# ---------------------------------------------------------
+# 測試連線 (保留原本的)
 # ---------------------------------------------------------
 
 # 測試連線，並將結果輸出到 DebugLogger

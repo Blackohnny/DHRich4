@@ -710,10 +710,8 @@ func _landing_chance_event(cell: CellData) -> void:
 		# 【優雅降級架構】檢查 AI 是否可用且已開啟
 		var ai_manager = get_node_or_null("/root/AIManager")
 		if ai_manager != null and ai_manager.is_ai_ready() and SettingsManager.current.ai_enabled:
-			DebugLogger.log_msg("✨ 觸發 AI 機會事件 [%s]！準備連線..." % chance.chance_id, true)
-			# TODO: Phase 5 實作 AI 互動介面與連線邏輯
-			await get_tree().create_timer(1.5).timeout 
-			_end_turn()
+			DebugLogger.log_msg("✨ 觸發 AI 機會事件 [%s]！" % chance.chance_id, true)
+			await _run_ai_destiny_dialog("幸運女神的考驗")
 		else:
 			# 傳統無 AI 模式 (Fallback)
 			_trigger_traditional_chance_event(chance)
@@ -780,16 +778,107 @@ func _landing_destiny_event(cell: CellData) -> void:
 		var destiny = cell as DestinyCellData
 		var ai_manager = get_node_or_null("/root/AIManager")
 		if ai_manager != null and ai_manager.is_ai_ready() and SettingsManager.current.ai_enabled:
-			DebugLogger.log_msg("💀 觸發 AI 命運事件 [%s]！準備連線..." % destiny.destiny_id, true)
-			# TODO: Phase 5
-			await get_tree().create_timer(1.5).timeout 
-			_end_turn()
+			DebugLogger.log_msg("💀 觸發 AI 命運事件 [%s]！" % destiny.destiny_id, true)
+			await _run_ai_destiny_dialog("命運之神的審判")
 		else:
 			_trigger_traditional_destiny_event(destiny)
 	else:
 		DebugLogger.log_msg("觸發命運事件！(未設定)")
 		await get_tree().create_timer(1.0).timeout 
 		_end_turn()
+
+# ==============================================================================
+# AI 命運之神互動流程 (Phase 5)
+# ==============================================================================
+func _run_ai_destiny_dialog(title: String) -> void:
+	current_state = GameState.EVENT_HANDLING
+	var current_player = get_node("/root/PlayerManager").get_current_turn_player()
+	var ai_manager = get_node("/root/AIManager")
+	
+	# 動態抽取角色 (Persona)
+	var persona = ai_manager.get_random_persona()
+	var npc_name = persona.get("name", "神秘存在")
+	var final_title = "遭遇: " + npc_name
+	
+	var total_rounds = 4 # 玩家可以回覆 3 次，第 4 次為神明結算
+
+	# 載入並實例化對話框 UI
+	var dialog_scene = preload("res://scenes/ui/components/DestinyDialogUI.tscn")
+	var dialog: DestinyDialogUI = dialog_scene.instantiate()
+	get_node("UI").add_child(dialog)
+	dialog.setup(final_title, npc_name, total_rounds - 1) # 傳入 3，代表玩家有 3 次回覆機會
+
+	var chat_history: Array = []
+	
+	# 綁定錯誤處理
+	var on_error = func(msg: String):
+		DebugLogger.log_msg("[ERROR] AI 對話發生錯誤: " + msg)
+		dialog.show_final_judgment("通訊中斷，" + npc_name + "離開了。")
+	ai_manager.destiny_error_occurred.connect(on_error)
+	
+	# === 進行 N 個來回的對話迴圈 ===
+	for current_round in range(1, total_rounds + 1):
+		# 1. AI 講話 (除了最後一回合外，都是單純的對話)
+		var is_final = (current_round == total_rounds)
+		ai_manager.request_destiny_event(chat_history, current_player.name, persona, is_final)
+		var ai_res = await ai_manager.destiny_response_received
+		
+		if is_final:
+			# 決算回合：拿到 JSON，跳出迴圈進行結算
+			var final_dialog = ai_res.get("dialog", "無言以對。")
+			var effects = ai_res.get("effects", [])
+			
+			# === 關閉原有的聊天對話框 ===
+			dialog.queue_free()
+			
+			# === 顯示最終結果的獨立彈窗 (ConfirmDialog) ===
+			var confirm_scene = preload("res://scenes/ui/components/ConfirmDialog.tscn")
+			var confirm_ui: ConfirmDialogUI = confirm_scene.instantiate()
+			get_node("UI").add_child(confirm_ui)
+			
+			var result_msg = final_dialog + "\n\n"
+			
+			if not effects.is_empty():
+				var mock_card = {"effects": effects}
+				var processor = get_node("/root/EventProcessor")
+				var summary_text = ""
+				for effect in effects:
+					summary_text += processor.get_effect_description(effect) + "\n"
+				
+				result_msg += "[ 命運的影響 ]\n" + summary_text
+				DebugLogger.log_msg("=== AI 裁決結果 ===\n" + summary_text.strip_edges(), true)
+				processor.execute_card(mock_card, current_player)
+			else:
+				result_msg += "[ 命運的影響 ]\n沒有任何實質影響。"
+				DebugLogger.log_msg(npc_name + " 沒有給予任何實質影響。", true)
+			
+			confirm_ui.setup("最終裁決", result_msg, false, "關閉")
+			
+			# 等待玩家按下確認後才結束回合
+			await confirm_ui.dialog_resolved
+			break # 結束迴圈
+			
+		else:
+			# 一般回合：顯示 AI 對話，並等待玩家回覆
+			var ai_msg = ai_res.get("dialog", "人類，回答我，你渴望力量嗎？")
+			chat_history.append({"role": "assistant", "content": ai_msg})
+			dialog.add_ai_message(ai_msg)
+			
+			# 如果是 AI 電腦，就跳過 UI 輸入，直接隨機回覆
+			if current_player.is_ai:
+				var mock_replies = ["給我錢！", "我什麼都不要。", "請賜予我奇蹟！", "你這傢伙在說什麼？"]
+				var mock_reply = mock_replies[randi() % mock_replies.size()]
+				await get_tree().create_timer(1.5).timeout
+				dialog._submit_player_text(mock_reply)
+			
+			# 等待玩家按下送出
+			var player_text = await dialog.player_replied
+			chat_history.append({"role": "user", "content": player_text})
+			
+	# ==============================
+	
+	ai_manager.destiny_error_occurred.disconnect(on_error)
+	_end_turn()
 
 func _landing_minigame_event(cell: CellData) -> void:
 	if cell is MinigameCellData:
