@@ -167,21 +167,21 @@
 *   [ ] **4.2 抓取外部資料**: 尋找免費的新聞或股市 API (如 NewsAPI, Finnhub)，實作 GET 請求取得當日頭條或指數。
 *   [ ] **4.3 現實影響遊戲**: 解析 API 回傳的 JSON，提取關鍵字或漲跌幅，寫一個函式將其轉換為遊戲影響 (例如：「科技股上漲 2% -> 遊戲內所有過路費 + 20%」)，並顯示在 UI 系統訊息區。
 
-### Phase 5: AI 命運之神 (Gemini Interactive Event) [🚧 進行中]
+### Phase 5: AI 命運之神 (Gemini Interactive Event) [✅ 完成]
 *   [x] **5.1 建立 AI 連線管理器 (AIManager)**: 實作讀取 `ai_config.json` 與雙路徑 (`user://`, `res://`) 的優雅降級。
 *   [x] **5.2 串接 OpenAI 相容 API**: 實作 `HTTPRequest` 發送至 AI Endpoint，並測試成功。
-*   [ ] **5.3 實作受限的自由 (Bounded Freedom) API**: 擴充 `AIManager.gd`，在決算回合傳送嚴格的 System Prompt 與 JSON Schema，約束 AI 只能從允許的指令庫 (如 `add_cash`, `add_item`) 自由組合結果，確保遊戲邏輯不崩潰。
-*   [ ] **5.4 建立對話 UI**: 製作包含 `RichTextLabel` (顯示歷史對話) 與 `LineEdit` (玩家輸入) 的 `DestinyDialogUI` 面板。
-*   [ ] **5.5 事件結算與指令執行**: 解析最後回合 AI 回傳的 JSON `effects` 陣列，直接交由 `EventProcessor` 執行，套用獎懲至 `PlayerStats`。
+*   [x] **5.3 實作受限的自由 (Bounded Freedom) API**: 擴充 `AIManager.gd`，在決算回合傳送嚴格的 System Prompt 與 JSON Schema，約束 AI 只能從允許的指令庫 (如 `add_cash`, `add_item`) 自由組合結果，確保遊戲邏輯不崩潰。導入「動態角色扮演 (Dynamic Personas)」解決單一 Prompt 疲勞。
+*   [x] **5.4 建立對話 UI**: 製作包含 `RichTextLabel` (顯示歷史對話) 與 `LineEdit` (玩家輸入) 的 `DestinyDialogUI` 面板。實作三回合對話的協程狀態機與捲動防呆。
+*   [x] **5.5 事件結算與指令執行**: 解析最後回合 AI 回傳的 JSON `effects` 陣列，直接交由 `EventProcessor` 執行，並優雅地透過 `ConfirmDialog` 彈窗向玩家展示結果。
 
 ---
 
 ## 📈 進度追蹤表 (Progress Tracker)
 - [x] Phase 1 完成
 - [x] Phase 2 完成
-- [ ] Phase 3 完成
-- [ ] Phase 4 完成
-- [ ] Phase 5 進行中
+- [ ] Phase 3 進行中
+- [ ] Phase 4 尚未開始
+- [x] Phase 5 完成
 
 ---
 *文件建立日期: 2026-04-01*
