@@ -170,11 +170,9 @@
 ### Phase 5: AI 命運之神 (Gemini Interactive Event) [🚧 進行中]
 *   [x] **5.1 建立 AI 連線管理器 (AIManager)**: 實作讀取 `ai_config.json` 與雙路徑 (`user://`, `res://`) 的優雅降級。
 *   [x] **5.2 串接 OpenAI 相容 API**: 實作 `HTTPRequest` 發送至 AI Endpoint，並測試成功。
-*   [ ] **5.3 建立對話 UI**: 製作包含 `RichTextLabel` (顯示歷史對話) 與 `LineEdit` (玩家輸入) 的對話框面板。
-*   [ ] **5.4 實作三回合對話機制**:
-    *   **回合 1-2**: System Prompt 設定 AI 為神秘商人。將玩家輸入傳給 AI，AI 回傳對話顯示於 UI。
-    *   **回合 3**: 強制 Prompt 要求 AI 總結對話，並輸出嚴格的 JSON 格式 (例如 `{"dialog": "最後一句話", "reward_money": 1000, "item": "none"}`)。
-*   [ ] **5.5 事件結算**: 解析最後回合的 JSON，套用獎懲至 `PlayerStats`，並關閉對話框。
+*   [ ] **5.3 實作受限的自由 (Bounded Freedom) API**: 擴充 `AIManager.gd`，在決算回合傳送嚴格的 System Prompt 與 JSON Schema，約束 AI 只能從允許的指令庫 (如 `add_cash`, `add_item`) 自由組合結果，確保遊戲邏輯不崩潰。
+*   [ ] **5.4 建立對話 UI**: 製作包含 `RichTextLabel` (顯示歷史對話) 與 `LineEdit` (玩家輸入) 的 `DestinyDialogUI` 面板。
+*   [ ] **5.5 事件結算與指令執行**: 解析最後回合 AI 回傳的 JSON `effects` 陣列，直接交由 `EventProcessor` 執行，套用獎懲至 `PlayerStats`。
 
 ---
 

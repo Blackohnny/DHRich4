@@ -2,6 +2,71 @@ extends Node
 
 var default_events: Dictionary = {}
 
+# ==============================================================================
+# AI 命運之神指令定義 (Bounded Freedom Schema)
+# ==============================================================================
+# 這份字典定義了 AI 能夠使用的所有合法指令與參數範圍。
+# 它是「單一資料來源 (SSOT)」，不僅用於動態產生給 LLM 的 Prompt，
+# 也用於在 Godot 端驗證 AI 傳回來的 JSON 是否合法。
+const COMMAND_SCHEMA: Dictionary = {
+	"add_cash": {
+		"description": "增加玩家現金",
+		"params": {"target": "Enum: ['self', 'all', 'others']", "amount": "Integer: 100~5000"}
+	},
+	"deduct_cash": {
+		"description": "扣除玩家現金",
+		"params": {"target": "Enum: ['self', 'all', 'others']", "amount": "Integer: 100~5000"}
+	},
+	"add_points": {
+		"description": "增加玩家點數",
+		"params": {"target": "Enum: ['self', 'all', 'others']", "amount": "Integer: 10~500"}
+	},
+	"deduct_points": {
+		"description": "扣除玩家點數",
+		"params": {"target": "Enum: ['self', 'all', 'others']", "amount": "Integer: 10~500"}
+	},
+	"add_item": {
+		"description": "給予玩家特定道具",
+		"params": {"target": "Enum: ['self', 'all', 'others']", "item_id": "String: 必須是 ALLOWED_ITEMS 之一"}
+	},
+	"remove_item": {
+		"description": "沒收玩家特定道具 (若無該道具則無效)",
+		"params": {"target": "Enum: ['self', 'all', 'others']", "item_id": "String: 必須是 ALLOWED_ITEMS 之一"}
+	},
+	"transfer_cash": {
+		"description": "將資金從 target 轉移給觸發者 (self)",
+		"params": {"target": "Enum: ['others']", "amount": "Integer: 100~5000"}
+	}
+}
+
+# 目前遊戲內所有合法的道具 ID 清單 (對應 src/scripts/models/items/*.tres)
+const ALLOWED_ITEMS: Array[String] = [
+	"item_remote_dice",
+	"item_roadblock",
+	"item_turtle",
+	"item_missile",
+	"item_angel",
+	"item_card_6"
+]
+
+## 動態產生給 AI 的 JSON Schema Prompt
+## 讓 AI 知道它可以使用哪些積木來組合命運結果
+func get_schema_prompt() -> String:
+	var prompt: String = "【允許的指令清單 (Command List)】\n"
+	prompt += "你只能使用以下指令組合 'effects' 陣列 (最多 2 個效果)：\n\n"
+
+	for cmd in COMMAND_SCHEMA:
+		var info = COMMAND_SCHEMA[cmd]
+		prompt += "- 指令 `%s`: %s\n" % [cmd, info["description"]]
+		prompt += "  參數: %s\n" % JSON.stringify(info["params"])
+
+	prompt += "\n【允許的道具 ID (ALLOWED_ITEMS)】\n"
+	prompt += JSON.stringify(ALLOWED_ITEMS) + "\n"
+
+	return prompt
+
+# ==============================================================================
+
 func _ready() -> void:
 	_load_and_validate_default_events()
 
@@ -41,6 +106,11 @@ func _execute_single_command(cmd_data: Dictionary, trigger_player: PlayerData) -
 	var amount: float = cmd_data.get("amount", 0.0) 
 	var item_id: String = cmd_data.get("item_id", "")
 
+	# 安全驗證：阻擋 AI 產生未知的指令
+	if not COMMAND_SCHEMA.has(cmd) and not cmd in ["place_roadblock", "set_dice", "remote_dice"]:
+		DebugLogger.log_msg("[WARNING] EventProcessor 攔截到未知指令: " + cmd)
+		return
+
 	# 1. 決定目標對象 (Array[PlayerData])
 	var target_players: Array[PlayerData] = _resolve_player_targets(target_str, trigger_player)
 
@@ -48,22 +118,59 @@ func _execute_single_command(cmd_data: Dictionary, trigger_player: PlayerData) -
 	for p in target_players:
 		match cmd:
 			"add_cash":
-				p.add_cash(amount)
-				DebugLogger.log_msg("事件效果：[%s] 獲得 $%d" % [p.name, amount], true)
+				var final_amount = clamp(int(amount), 1, 10000) # 防止破壞平衡
+				p.add_cash(final_amount)
+				DebugLogger.log_msg("事件效果：[%s] 獲得 $%d" % [p.name, final_amount], true)
 			"deduct_cash":
-				p.deduct_cash(amount, true) # 事件扣款皆為強制
-				DebugLogger.log_msg("事件效果：[%s] 失去 $%d" % [p.name, amount], true)
+				var final_amount = clamp(int(amount), 1, 10000)
+				p.deduct_cash(final_amount, true) # 事件扣款皆為強制
+				DebugLogger.log_msg("事件效果：[%s] 失去 $%d" % [p.name, final_amount], true)
+			"add_points":
+				var final_amount = clamp(int(amount), 1, 1000)
+				p._points += final_amount
+				DebugLogger.log_msg("事件效果：[%s] 獲得 %d 點點數" % [p.name, final_amount], true)
 			"deduct_points":
-				p._points -= amount # 簡單扣點數，可以考慮在 PlayerData 加 deduct_points()
-				DebugLogger.log_msg("事件效果：[%s] 失去 %d 點點數！" % [p.name, amount], true)
+				var final_amount = clamp(int(amount), 1, 1000)
+				p._points = max(0, p._points - final_amount) # 點數不為負
+				DebugLogger.log_msg("事件效果：[%s] 失去 %d 點點數！" % [p.name, final_amount], true)
+			"transfer_cash":
+				# 從目標扣錢，加給觸發者
+				var final_amount = clamp(int(amount), 1, 10000)
+				var actual_deducted = min(p._cash + p._deposit, final_amount) # 最多扣到破產
+				p.deduct_cash(actual_deducted, true)
+				trigger_player.add_cash(actual_deducted)
+				DebugLogger.log_msg("事件效果：[%s] 的 $%d 資金被轉移給了 [%s]" % [p.name, actual_deducted, trigger_player.name], true)
 			"place_roadblock":
 				DebugLogger.log_msg("事件效果：[%s] 放置了路障！(尚未實作地圖障礙物系統)" % p.name, true)
 			"add_item":
-				if item_id != "":
-					# TODO: 從 ResourceManager 載入真正的 ItemData 實體
-					DebugLogger.log_msg("事件效果：[%s] 獲得了道具 ID [%s] (尚未實作 ResourceManager 載入)" % [p.name, item_id], true)
+				if item_id in ALLOWED_ITEMS:
+					# 使用 ResourceManager 動態載入
+					var res_path = "res://scripts/models/items/" + item_id + ".tres"
+					var item_res = load(res_path) as ItemData
+					if item_res:
+						p._items.append(item_res)
+						DebugLogger.log_msg("事件效果：[%s] 獲得了道具 [%s]" % [p.name, item_res.name], true)
+					else:
+						DebugLogger.log_msg("[ERROR] 無法載入道具資源: " + res_path)
 				else:
-					DebugLogger.log_msg("[ERROR] add_item 缺少 item_id 參數！")
+					DebugLogger.log_msg("[ERROR] add_item 參數不合法或缺少 item_id！(收到: %s)" % item_id)
+			"remove_item":
+				if item_id in ALLOWED_ITEMS:
+					# 尋找玩家身上有沒有這個道具
+					var found_index = -1
+					for i in range(p._items.size()):
+						if p._items[i].id == item_id: # 假設 ItemData 有 id 屬性，或用 resource_path 判斷
+							found_index = i
+							break
+
+					if found_index != -1:
+						var removed_name = p._items[found_index].name
+						p._items.remove_at(found_index)
+						DebugLogger.log_msg("事件效果：[%s] 的道具 [%s] 被沒收了！" % [p.name, removed_name], true)
+					else:
+						DebugLogger.log_msg("事件效果：命運之神想沒收 [%s] 的 [%s]，但他根本沒有這個道具！" % [p.name, item_id], true)
+				else:
+					DebugLogger.log_msg("[ERROR] remove_item 參數不合法或缺少 item_id！")
 			"set_dice":
 				# 要求 Main.gd 在下一步強制走 amount 步
 				var main = Engine.get_main_loop().current_scene
