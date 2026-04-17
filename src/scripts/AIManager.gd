@@ -104,7 +104,116 @@ func is_ai_ready() -> bool:
 	return is_ready
 
 # ---------------------------------------------------------
-# AI 命運之神對話核心 (Phase 5)
+# AI 每日時事生成核心 (Phase 5 Extension)
+# ---------------------------------------------------------
+
+signal news_generation_completed(news_data: Dictionary)
+signal news_generation_failed(error_msg: String)
+
+## 向 AI 請求生成符合今日日期的時事卡片
+func request_daily_news_generation(today_date: String) -> void:
+	if not is_ready:
+		news_generation_failed.emit("AI 未連線，無法生成時事。")
+		return
+
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	http_request.request_completed.connect(self._on_news_request_completed.bind(http_request, today_date))
+
+	var headers = [
+		"Content-Type: application/json",
+		"Authorization: Bearer " + api_key
+	]
+
+	# 未來可以從 SettingsManager 讀取，目前先寫死
+	var chance_count = 3
+	var destiny_count = 3
+
+	# 1. 建立生成時事卡的 System Prompt
+	var system_prompt = "你現在是一位專業的大富翁遊戲企劃與新聞編輯。\n"
+	system_prompt += "今天的日期是：%s。請以最近幾天全球發生的真實重大「科技」、「財經」或「社會」新聞為主題（如果你無法連網，請根據你知識庫中近幾年的重大歷史事件來虛構合理的新聞）。\n" % today_date
+	system_prompt += "請幫我設計 %d 張機會卡 (chance) 與 %d 張命運卡 (destiny)。\n" % [chance_count, destiny_count]
+	system_prompt += "機會卡高機率是好事（例如：獲得金錢、獲得道具、給所有人發紅包）。命運卡高機率是壞事（例如：扣錢、沒收道具、所有人扣錢）。\n"
+	system_prompt += "【重要指令：全域事件】請確保在生成的卡片中，至少有 1 到 2 張卡片是影響「所有人(all)」或「其他人(others)」的範圍事件（例如：全球通膨導致所有人扣款，或全民普發獎金）。\n"
+	system_prompt += "【重要】每張卡片的 'id' 請用 'news_c_隨機數字' 或 'news_d_隨機數字' 命名。\n"
+	system_prompt += "【重要】每張卡片的 'weight' 請固定設定為 15。\n"
+	system_prompt += "請「嚴格」回傳以下格式的 JSON，不要包含任何額外廢話或 Markdown 標籤：\n"
+	system_prompt += "{\n"
+	system_prompt += "  \"date\": \"%s\",\n" % today_date
+	system_prompt += "  \"chance\": [\n"
+	system_prompt += "    { \"id\": \"news_c_01\", \"title\": \"標題\", \"description\": \"新聞描述...\", \"weight\": 15, \"effects\": [{\"cmd\": \"add_cash\", \"target\": \"self\", \"amount\": 1000}] }\n"
+	system_prompt += "  ],\n"
+	system_prompt += "  \"destiny\": [ ... ]\n"
+	system_prompt += "}\n\n"
+
+	# 動態掛載 EventProcessor 的 Schema，約束 AI 只能產生合法的遊戲機制
+	var processor = get_node_or_null("/root/EventProcessor")
+	if processor:
+		system_prompt += processor.get_schema_prompt()
+
+	var messages = [{"role": "system", "content": system_prompt}]
+
+	var payload = {
+		"model": model_name,
+		"temperature": 0.4, # 給予一點點創意空間，但保持 JSON 結構穩定
+		"max_tokens": 2000, # 卡片變多，提高 token 數量
+		"messages": messages,
+		"stream": false,
+		"response_format": { "type": "json_object" } # 強制 JSON 輸出
+	}
+
+	var json_payload = JSON.stringify(payload)
+
+	# === [新增詳細 Log] 記錄打出去的完整 Payload ===
+	DebugLogger.log_msg("🚀 [News AI Request] 準備向模型請求生成今日時事卡片: " + today_date)
+	DebugLogger.log_msg("發送的完整 Payload 內容:\n" + JSON.stringify(payload, "  "))
+	# ==========================================
+
+	var err = http_request.request(api_endpoint, headers, HTTPClient.METHOD_POST, json_payload)
+	if err != OK:
+		DebugLogger.log_msg("[ERROR] News HTTPRequest 發送失敗！錯誤碼: %d" % err)
+		news_generation_failed.emit("網路發送失敗。")
+		http_request.queue_free()
+
+func _on_news_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray, http_node: HTTPRequest, expected_date: String) -> void:
+	http_node.queue_free()
+
+	if result != HTTPRequest.RESULT_SUCCESS:
+		news_generation_failed.emit("網路連線失敗。")
+		return
+
+	var response_text = body.get_string_from_utf8()
+
+	if response_code == 200:
+		var json = JSON.parse_string(response_text)
+
+		# === [新增詳細 Log] 記錄 AI 回傳的完整 HTTP Response ===
+		DebugLogger.log_msg("📥 [News AI Raw Response] 收到完整伺服器回覆 Payload:")
+		DebugLogger.log_msg(response_text)
+		# ==========================================
+
+		if typeof(json) == TYPE_DICTIONARY and json.has("choices"):
+			var ai_reply_str = json.choices[0].message.content
+
+			DebugLogger.log_msg("📥 [News AI Content] 解析出的時事卡片 JSON 內容:")
+			DebugLogger.log_msg(ai_reply_str)
+
+			var news_json = JSON.parse_string(ai_reply_str)
+			if news_json != null and typeof(news_json) == TYPE_DICTIONARY:
+				# 強制覆寫日期，確保快取一致性
+				news_json["date"] = expected_date
+				news_generation_completed.emit(news_json)
+			else:
+				DebugLogger.log_msg("[ERROR] AI 產生的時事卡片不是合法的 JSON。")
+				news_generation_failed.emit("JSON 解析失敗。")
+		else:
+			news_generation_failed.emit("AI 回傳格式異常。")
+	else:
+		DebugLogger.log_msg("[ERROR] News 伺服器錯誤 %d: " % response_code + response_text)
+		news_generation_failed.emit("伺服器錯誤：" + str(response_code))
+
+# ---------------------------------------------------------
+# AI 通訊核心 (Phase 5 測試用)
 # ---------------------------------------------------------
 
 signal destiny_response_received(response_data: Dictionary)
@@ -223,11 +332,17 @@ func _on_destiny_request_completed(result: int, response_code: int, headers: Pac
 
 	if response_code == 200:
 		var json = JSON.parse_string(response_text)
+		
+		# === [新增詳細 Log] 記錄 AI 回傳的完整 HTTP Response ===
+		DebugLogger.log_msg("📥 [Destiny AI Raw Response] 收到完整伺服器回覆 Payload:")
+		DebugLogger.log_msg(response_text)
+		# ==========================================
+		
 		if typeof(json) == TYPE_DICTIONARY and json.has("choices"):
 			var ai_reply_str = json.choices[0].message.content
 			
-			# === [新增詳細 Log] 記錄 AI 回傳的原始內容 ===
-			DebugLogger.log_msg("📥 [AI Response] 收到模型回覆:")
+			# === [新增詳細 Log] 記錄 AI 回傳的純淨對話內容 ===
+			DebugLogger.log_msg("📥 [Destiny AI Content] 模型對話內容:")
 			DebugLogger.log_msg(ai_reply_str)
 			# ==========================================
 			

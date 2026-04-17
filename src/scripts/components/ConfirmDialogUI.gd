@@ -20,12 +20,22 @@ func _ready() -> void:
 
 ## 初始化對話框
 ## `is_dual_choice` 為 true 顯示「確認/取消」，為 false 只顯示「確定」
-func setup(title: String, message: String, is_dual_choice: bool = true, confirm_text: String = "確認", cancel_text: String = "取消") -> void:
+## `hide_all_buttons` 若為 true，則隱藏所有按鈕 (用於讀取中的 Loading 提示)
+func setup(title: String, message: String, is_dual_choice: bool = true, confirm_text: String = "確認", cancel_text: String = "取消", hide_all_buttons: bool = false) -> void:
+	if not is_node_ready():
+		await ready
+		
 	title_label.text = title
 	message_label.text = message
-	
+
+	if hide_all_buttons:
+		confirm_button.hide()
+		cancel_button.hide()
+		return
+
 	confirm_button.text = confirm_text
-	
+	confirm_button.show()
+
 	if is_dual_choice:
 		cancel_button.text = cancel_text
 		cancel_button.show()
@@ -33,7 +43,6 @@ func setup(title: String, message: String, is_dual_choice: bool = true, confirm_
 		cancel_button.hide()
 		# 將唯一的按鈕置中並變大
 		confirm_button.custom_minimum_size.x = 200
-
 func _on_confirm() -> void:
 	dialog_resolved.emit(true)
 	queue_free()

@@ -54,6 +54,10 @@ func _ready() -> void:
 	# 遊戲開始，初始化所有玩家棋子
 	if current_board and current_board.cells.size() > 0:
 		_spawn_players()
+		
+	# 提示：如果尚未註冊 NewsManager
+	if not get_node_or_null("/root/NewsManager"):
+		DebugLogger.log_msg("【注意】若要啟用每日時事卡片，請在 Project Settings > AutoLoad 註冊 res://scripts/NewsManager.gd", true)
 
 func _process(_delta: float) -> void:
 	# 按下 ESC 鍵來開關 Debug 視窗

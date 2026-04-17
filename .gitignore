@@ -11,3 +11,6 @@ src/logs/godot*.log
 
 # 我們原本手動寫的遊戲事件 log
 src/logs/dhrich4_debug*.log
+
+# 忽略會自動產生的文件
+daily_news_events.json

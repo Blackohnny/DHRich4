@@ -111,6 +111,29 @@ func _load_and_validate_default_events() -> void:
 		return
 	default_events = json_data
 
+## 動態注入 AI 生成的時事卡片 (Daily News Events)
+## news_cards 格式預期為: {"chance": [...], "destiny": [...]}
+func inject_news_events(news_cards: Dictionary) -> void:
+	var injected_count = 0
+	
+	for category in ["chance", "destiny"]:
+		if news_cards.has(category) and typeof(news_cards[category]) == TYPE_ARRAY:
+			if not default_events.has(category):
+				default_events[category] = []
+				
+			var new_events: Array = news_cards[category]
+			for event in new_events:
+				# 簡單防呆：確保有 id 和 effects 才會被加進去
+				if typeof(event) == TYPE_DICTIONARY and event.has("id") and event.has("effects"):
+					# 為了在 UI 上好辨識，我們可以強制給時事卡加上特定標籤
+					event["title"] = "📰 [時事] " + event.get("title", "突發新聞")
+					default_events[category].append(event)
+					injected_count += 1
+					
+	if injected_count > 0:
+		DebugLogger.log_msg("📰 成功將 %d 張 AI 時事卡片注入今日牌堆！" % injected_count, true)
+	else:
+		DebugLogger.log_msg("[WARNING] 嘗試注入時事卡片，但格式不符或沒有有效卡片。")
 
 ## 根據卡片資料 (Dictionary) 解析並執行指令陣列
 func execute_card(card_data: Dictionary, trigger_player: PlayerData) -> void:

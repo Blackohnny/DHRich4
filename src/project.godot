@@ -23,6 +23,7 @@ SettingsManager="*res://scripts/SettingsManager.gd"
 ResourceManager="*res://scripts/ResourceManager.gd"
 AIManager="*res://scripts/AIManager.gd"
 PlayerManager="*res://scripts/PlayerManager.gd"
+NewsManager="*res://scripts/NewsManager.gd"
 
 [debug]
 

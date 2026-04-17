@@ -127,6 +127,18 @@ func _create_debug_window() -> void:
 	btn_print_settings.pressed.connect(_on_print_settings_pressed)
 	ai_tools_hbox.add_child(btn_print_settings)
 
+	# 加入列印所有事件卡片按鈕
+	var btn_print_events = Button.new()
+	btn_print_events.text = " 列印所有事件 "
+	btn_print_events.pressed.connect(_on_print_events_pressed)
+	ai_tools_hbox.add_child(btn_print_events)
+	
+	# 加入強制更新時事按鈕
+	var btn_force_news = Button.new()
+	btn_force_news.text = " 強制更新時事 "
+	btn_force_news.pressed.connect(_on_force_news_pressed)
+	ai_tools_hbox.add_child(btn_force_news)
+
 	# 6. 建立玩家人數切換按鈕區 (HBoxContainer)
 	var player_count_hbox = HBoxContainer.new()
 	main_vbox.add_child(player_count_hbox)
@@ -142,8 +154,32 @@ func _create_debug_window() -> void:
 	log_msg("Debug Console Initialized. Log file saved at: " + ProjectSettings.globalize_path(LOG_FILE_PATH))
 
 # ---------------------------------------------------------
-# 作弊按鈕事件處理 (Cheat Button Handlers)
+# 作弊與開發工具按鈕事件處理 (Cheat Button Handlers)
 # ---------------------------------------------------------
+
+func _on_print_events_pressed() -> void:
+	var processor = get_node_or_null("/root/EventProcessor")
+	if processor != null:
+		log_msg("📋 目前牌堆 (機會/命運) 所有事件清單：", true)
+		for category in processor.default_events.keys():
+			log_msg("【%s】牌堆 (共 %d 張):" % [category.to_upper(), processor.default_events[category].size()])
+			for event in processor.default_events[category]:
+				var id = event.get("id", "unknown")
+				var title = event.get("title", "無標題")
+				var weight = event.get("weight", 0)
+				log_msg("  - [%s] %s (權重: %s)" % [id, title, str(weight)])
+		log_msg("=========================")
+	else:
+		log_msg("[ERROR] 找不到 EventProcessor！")
+
+func _on_force_news_pressed() -> void:
+	var news_mgr = get_node_or_null("/root/NewsManager")
+	if news_mgr != null:
+		log_msg("🔥 開發者強制觸發更新今日時事！", true)
+		# 即使檔案存在，也強制要求重新生成
+		news_mgr._generate_new_daily_news(Time.get_date_string_from_system())
+	else:
+		log_msg("[ERROR] 找不到 NewsManager！請先在 Project Settings 註冊 AutoLoad。")
 
 func _on_cheat_set_players(count: int) -> void:
 	if main_controller != null and main_controller.has_method("force_set_player_count"):
