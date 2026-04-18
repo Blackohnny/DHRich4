@@ -710,15 +710,8 @@ func _check_monopoly(target_district: int, p_id: int) -> void:
 func _landing_chance_event(cell: CellData) -> void:
 	if cell is ChanceCellData:
 		var chance = cell as ChanceCellData
-
-		# 【優雅降級架構】檢查 AI 是否可用且已開啟
-		var ai_manager = get_node_or_null("/root/AIManager")
-		if ai_manager != null and ai_manager.is_ai_ready() and SettingsManager.current.ai_enabled:
-			DebugLogger.log_msg("✨ 觸發 AI 機會事件 [%s]！" % chance.chance_id, true)
-			await _run_ai_destiny_dialog("幸運女神的考驗")
-		else:
-			# 傳統無 AI 模式 (Fallback)
-			_trigger_traditional_chance_event(chance)
+		DebugLogger.log_msg("🎴 觸發機會事件 [%s]，準備抽卡..." % chance.chance_id, true)
+		_trigger_traditional_chance_event(chance)
 	else:
 		DebugLogger.log_msg("觸發機會事件！(未設定)")
 		await get_tree().create_timer(1.5).timeout 

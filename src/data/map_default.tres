@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bnidyrjfy1tcv" path="res://scripts/CellData.gd" id="1_tpgd8"]
 [ext_resource type="Script" uid="uid://c72xd17kxdhy4" path="res://scripts/BoardData.gd" id="2_q8nuo"]
 [ext_resource type="Script" uid="uid://dpf1h2y3oal48" path="res://scripts/cells/ChanceCellData.gd" id="ext_chance"]
+[ext_resource type="Script" uid="uid://b270yb0er8ifw" path="res://scripts/cells/DestinyCellData.gd" id="ext_destiny"]
 [ext_resource type="Script" uid="uid://dbw70qvdahbce" path="res://scripts/cells/LandCellData.gd" id="ext_land"]
 [ext_resource type="Script" uid="uid://dp7md4qsc04oi" path="res://scripts/cells/StartCellData.gd" id="ext_start"]
 
@@ -71,7 +72,7 @@ position = Vector2(536, 324)
 next_nodes = [7, 9]
 
 [sub_resource type="Resource" id="Resource_vpa8q"]
-script = ExtResource("ext_chance")
+script = ExtResource("ext_destiny")
 name = "交叉口 #9"
 position = Vector2(456, 324)
 icon_offset = Vector2(-80, 0)
