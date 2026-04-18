@@ -1,0 +1,120 @@
+[gd_scene load_steps=2 format=3 uid="uid://news_onboarding_ui_scene"]
+
+[ext_resource type="Script" path="res://scripts/ui/NewsOnboardingUI.gd" id="1_news"]
+
+[node name="NewsOnboardingUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_news")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.8)
+
+[node name="InputScreen" type="VBoxContainer" parent="ColorRect"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -150.0
+offset_right = 250.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="ColorRect/InputScreen"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "今日晨報設定"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="ColorRect/InputScreen"]
+layout_mode = 2
+text = "請輸入您關心的3個話題，我們將為您抓取最新時事並轉化為機會命運卡。"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/InputScreen"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Topic1" type="LineEdit" parent="ColorRect/InputScreen/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "台灣"
+
+[node name="Topic2" type="LineEdit" parent="ColorRect/InputScreen/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "手遊"
+
+[node name="Topic3" type="LineEdit" parent="ColorRect/InputScreen/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "貓咪"
+
+[node name="RefreshButton" type="Button" parent="ColorRect/InputScreen/HBoxContainer"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "🎲"
+tooltip_text = "隨機更換話題"
+
+[node name="SearchButton" type="Button" parent="ColorRect/InputScreen"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
+text = "搜尋新聞"
+
+[node name="ResultScreen" type="VBoxContainer" parent="ColorRect"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -350.0
+offset_top = -250.0
+offset_right = 350.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="ColorRect/ResultScreen"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "今日晨報摘要"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="ColorRect/ResultScreen"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="NewsList" type="VBoxContainer" parent="ColorRect/ResultScreen/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 15
+
+[node name="GenerateButton" type="Button" parent="ColorRect/ResultScreen"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
+text = "將新聞轉化為命運卡並開始遊戲"

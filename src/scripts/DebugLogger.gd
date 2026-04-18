@@ -116,11 +116,11 @@ func _create_debug_window() -> void:
 	ai_tools_hbox.add_child(btn_test_ai)
 
 	# 預留空按鈕
-	for i in range(1):
-		var empty_btn = Button.new()
-		empty_btn.text = " 預留 "
-		ai_tools_hbox.add_child(empty_btn)
-		
+	var btn_test_news_ui = Button.new()
+	btn_test_news_ui.text = " 測試晨報 UI "
+	btn_test_news_ui.pressed.connect(_on_test_news_ui_pressed)
+	ai_tools_hbox.add_child(btn_test_news_ui)
+
 	# 加入印出全域設定按鈕
 	var btn_print_settings = Button.new()
 	btn_print_settings.text = " 列印全域設定 "
@@ -132,22 +132,16 @@ func _create_debug_window() -> void:
 	btn_print_events.text = " 列印所有事件 "
 	btn_print_events.pressed.connect(_on_print_events_pressed)
 	ai_tools_hbox.add_child(btn_print_events)
-	
-	# 加入強制更新時事按鈕
-	var btn_force_news = Button.new()
-	btn_force_news.text = " 強制更新時事 "
-	btn_force_news.pressed.connect(_on_force_news_pressed)
-	ai_tools_hbox.add_child(btn_force_news)
 
 	# 6. 建立玩家人數切換按鈕區 (HBoxContainer)
-	var player_count_hbox = HBoxContainer.new()
-	main_vbox.add_child(player_count_hbox)
+	var players_hbox = HBoxContainer.new()
+	main_vbox.add_child(players_hbox)
 	
 	for i in range(1, 5):
 		var btn = Button.new()
 		btn.text = " %d人遊戲 " % i
 		btn.pressed.connect(_on_cheat_set_players.bind(i))
-		player_count_hbox.add_child(btn)
+		players_hbox.add_child(btn)
 
 	# 7. 將視窗加入到目前的 Scene Tree 中
 	call_deferred("add_child", debug_window)
@@ -172,15 +166,6 @@ func _on_print_events_pressed() -> void:
 	else:
 		log_msg("[ERROR] 找不到 EventProcessor！")
 
-func _on_force_news_pressed() -> void:
-	var news_mgr = get_node_or_null("/root/NewsManager")
-	if news_mgr != null:
-		log_msg("🔥 開發者強制觸發更新今日時事！", true)
-		# 即使檔案存在，也強制要求重新生成
-		news_mgr._generate_new_daily_news(Time.get_date_string_from_system())
-	else:
-		log_msg("[ERROR] 找不到 NewsManager！請先在 Project Settings 註冊 AutoLoad。")
-
 func _on_cheat_set_players(count: int) -> void:
 	if main_controller != null and main_controller.has_method("force_set_player_count"):
 		main_controller.force_set_player_count(count)
@@ -200,6 +185,15 @@ func _on_reload_ai_pressed() -> void:
 		ai_manager.load_config()
 	else:
 		log_msg("[ERROR] AIManager 未註冊，無法重新讀取設定！")
+
+func _on_test_news_ui_pressed() -> void:
+	log_msg("📡 [測試] 強制開啟每日晨報 UI...")
+	var news_manager = get_node_or_null("/root/NewsManager")
+	if news_manager:
+		var today_date: String = Time.get_date_string_from_system()
+		news_manager._open_news_onboarding_ui(today_date)
+	else:
+		log_msg("[ERROR] 找不到 NewsManager！請先在 Project Settings 註冊 AutoLoad。")
 
 func _on_test_ai_pressed() -> void:
 	var ai_manager = get_node_or_null("/root/AIManager")

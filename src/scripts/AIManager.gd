@@ -111,7 +111,7 @@ signal news_generation_completed(news_data: Dictionary)
 signal news_generation_failed(error_msg: String)
 
 ## 向 AI 請求生成符合今日日期的時事卡片
-func request_daily_news_generation(today_date: String) -> void:
+func request_daily_news_generation(today_date: String, news_context: Array[Dictionary] = []) -> void:
 	if not is_ready:
 		news_generation_failed.emit("AI 未連線，無法生成時事。")
 		return
@@ -131,8 +131,18 @@ func request_daily_news_generation(today_date: String) -> void:
 
 	# 1. 建立生成時事卡的 System Prompt
 	var system_prompt = "你現在是一位專業的大富翁遊戲企劃與新聞編輯。\n"
-	system_prompt += "今天的日期是：%s。請以最近幾天全球發生的真實重大「科技」、「財經」或「社會」新聞為主題（如果你無法連網，請根據你知識庫中近幾年的重大歷史事件來虛構合理的新聞）。\n" % today_date
-	system_prompt += "請幫我設計 %d 張機會卡 (chance) 與 %d 張命運卡 (destiny)。\n" % [chance_count, destiny_count]
+	system_prompt += "今天的日期是：%s。\n" % today_date
+	
+	if news_context.size() > 0:
+		system_prompt += "請根據以下真實新聞摘要，設計 %d 張機會卡 (chance) 與 %d 張命運卡 (destiny)：\n\n" % [chance_count, destiny_count]
+		for i in range(news_context.size()):
+			var item = news_context[i]
+			system_prompt += "[新聞 %d]\n標題：%s\n摘要：%s\n\n" % [i + 1, item.get("title", ""), item.get("snippet", "")]
+		system_prompt += "請確保卡片的事件內容與上述新聞密切相關。\n"
+	else:
+		system_prompt += "請以最近幾天全球發生的真實重大「科技」、「財經」或「社會」新聞為主題（如果你無法連網，請根據你知識庫中近幾年的重大歷史事件來虛構合理的新聞）。\n"
+		system_prompt += "請幫我設計 %d 張機會卡 (chance) 與 %d 張命運卡 (destiny)。\n" % [chance_count, destiny_count]
+
 	system_prompt += "機會卡高機率是好事（例如：獲得金錢、獲得道具、給所有人發紅包）。命運卡高機率是壞事（例如：扣錢、沒收道具、所有人扣錢）。\n"
 	system_prompt += "【重要指令：全域事件】請確保在生成的卡片中，至少有 1 到 2 張卡片是影響「所有人(all)」或「其他人(others)」的範圍事件（例如：全球通膨導致所有人扣款，或全民普發獎金）。\n"
 	system_prompt += "【重要】每張卡片的 'id' 請用 'news_c_隨機數字' 或 'news_d_隨機數字' 命名。\n"
@@ -166,7 +176,7 @@ func request_daily_news_generation(today_date: String) -> void:
 
 	# === [新增詳細 Log] 記錄打出去的完整 Payload ===
 	DebugLogger.log_msg("🚀 [News AI Request] 準備向模型請求生成今日時事卡片: " + today_date)
-	DebugLogger.log_msg("發送的完整 Payload 內容:\n" + JSON.stringify(payload, "  "))
+	DebugLogger.log_msg("發送的完整 Payload (Prompt) 內容:\n" + JSON.stringify(payload, "  "))
 	# ==========================================
 
 	var err = http_request.request(api_endpoint, headers, HTTPClient.METHOD_POST, json_payload)
@@ -188,16 +198,12 @@ func _on_news_request_completed(result: int, response_code: int, headers: Packed
 		var json = JSON.parse_string(response_text)
 
 		# === [新增詳細 Log] 記錄 AI 回傳的完整 HTTP Response ===
-		DebugLogger.log_msg("📥 [News AI Raw Response] 收到完整伺服器回覆 Payload:")
-		DebugLogger.log_msg(response_text)
-		# ==========================================
-
-		if typeof(json) == TYPE_DICTIONARY and json.has("choices"):
+		DebugLogger.log_msg("📥 [News AI Raw Response Code] " + str(response_code))
+		
+		if typeof(json) == TYPE_DICTIONARY and json.has("choices") and json.choices.size() > 0:
 			var ai_reply_str = json.choices[0].message.content
-
-			DebugLogger.log_msg("📥 [News AI Content] 解析出的時事卡片 JSON 內容:")
-			DebugLogger.log_msg(ai_reply_str)
-
+			DebugLogger.log_msg("📥 [News AI Extracted Message Content]:\n" + ai_reply_str)
+			
 			var news_json = JSON.parse_string(ai_reply_str)
 			if news_json != null and typeof(news_json) == TYPE_DICTIONARY:
 				# 強制覆寫日期，確保快取一致性
