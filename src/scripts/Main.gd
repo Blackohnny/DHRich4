@@ -819,61 +819,80 @@ func _run_ai_destiny_dialog(title: String) -> void:
 		var is_final = (current_round == total_rounds)
 		ai_manager.request_destiny_event(chat_history, current_player.name, persona, is_final)
 		var ai_res = await ai_manager.destiny_response_received
-		
+
+		var final_dialog: String
+		var effects: Array
+		var need_final_resolution: bool = false
+
 		if is_final:
-			# 決算回合：拿到 JSON，跳出迴圈進行結算
-			var final_dialog = ai_res.get("dialog", "無言以對。")
-			var effects = ai_res.get("effects", [])
-			
-			# === 關閉原有的聊天對話框 ===
-			dialog.queue_free()
-			
-			# === 顯示最終結果的獨立彈窗 (ConfirmDialog) ===
+			# 正常的第四回合決算
+			final_dialog = ai_res.get("dialog", "無言以對。")
+			effects = ai_res.get("effects", [])
+			need_final_resolution = true
+		else:
+			# 一般回合：檢查是否包含提早結束的 [JUDGE] 關鍵字
+			var ai_msg = ai_res.get("dialog", "人類，回答我，你渴望力量嗎？")
+
+			if ai_msg.contains("[JUDGE]"):
+				DebugLogger.log_msg("【AI 提早進入裁決階段】")
+				# 如果 AI 說出 [JUDGE]，代表它生氣了或決定好結果了。
+				# 為了讓它產出穩定的 JSON，我們立即手動強制觸發一次 is_final = true 的 Request。
+				ai_manager.request_destiny_event(chat_history, current_player.name, persona, true)
+				var final_res = await ai_manager.destiny_response_received
+				final_dialog = final_res.get("dialog", "無言以對。")
+				effects = final_res.get("effects", [])
+				need_final_resolution = true
+			else:
+				# 正常的對話流程
+				chat_history.append({"role": "assistant", "content": ai_msg})
+				dialog.add_ai_message(ai_msg)
+
+				# 如果是 AI 電腦，就跳過 UI 輸入，直接隨機回覆
+				if current_player.is_ai:
+					var mock_replies = ["給我錢！", "我什麼都不要。", "請賜予我奇蹟！", "你這傢伙在說什麼？"]
+					var mock_reply = mock_replies[randi() % mock_replies.size()]
+					await get_tree().create_timer(1.5).timeout
+					dialog._submit_player_text(mock_reply)
+
+				# 等待玩家按下送出
+				var player_text = await dialog.player_replied
+				chat_history.append({"role": "user", "content": player_text})
+
+		if need_final_resolution:
+			# === 執行最終裁決的共通邏輯 ===
+
+			# 關閉原有的聊天對話框
+			if dialog != null:
+				dialog.queue_free()
+
+			# 顯示最終結果的獨立彈窗 (ConfirmDialog)
 			var confirm_scene = preload("res://scenes/ui/components/ConfirmDialog.tscn")
 			var confirm_ui: ConfirmDialogUI = confirm_scene.instantiate()
 			get_node("UI").add_child(confirm_ui)
-			
+
 			var result_msg = final_dialog + "\n\n"
-			
+
 			if not effects.is_empty():
 				var mock_card = {"effects": effects}
 				var processor = get_node("/root/EventProcessor")
 				var summary_text = ""
 				for effect in effects:
 					summary_text += processor.get_effect_description(effect) + "\n"
-				
+
 				result_msg += "[ 命運的影響 ]\n" + summary_text
 				DebugLogger.log_msg("=== AI 裁決結果 ===\n" + summary_text.strip_edges(), true)
 				processor.execute_card(mock_card, current_player)
 			else:
 				result_msg += "[ 命運的影響 ]\n沒有任何實質影響。"
 				DebugLogger.log_msg(npc_name + " 沒有給予任何實質影響。", true)
-			
+
 			confirm_ui.setup("最終裁決", result_msg, false, "關閉")
-			
+
 			# 等待玩家按下確認後才結束回合
 			await confirm_ui.dialog_resolved
-			break # 結束迴圈
-			
-		else:
-			# 一般回合：顯示 AI 對話，並等待玩家回覆
-			var ai_msg = ai_res.get("dialog", "人類，回答我，你渴望力量嗎？")
-			chat_history.append({"role": "assistant", "content": ai_msg})
-			dialog.add_ai_message(ai_msg)
-			
-			# 如果是 AI 電腦，就跳過 UI 輸入，直接隨機回覆
-			if current_player.is_ai:
-				var mock_replies = ["給我錢！", "我什麼都不要。", "請賜予我奇蹟！", "你這傢伙在說什麼？"]
-				var mock_reply = mock_replies[randi() % mock_replies.size()]
-				await get_tree().create_timer(1.5).timeout
-				dialog._submit_player_text(mock_reply)
-			
-			# 等待玩家按下送出
-			var player_text = await dialog.player_replied
-			chat_history.append({"role": "user", "content": player_text})
-			
-	# ==============================
-	
+			break # 無論是第幾回合，完成裁決就結束整個 Destiny 迴圈
+
+	# ==============================	
 	ai_manager.destiny_error_occurred.disconnect(on_error)
 	_end_turn()
 

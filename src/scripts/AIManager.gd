@@ -281,10 +281,9 @@ func request_destiny_event(chat_history: Array, player_name: String, persona: Di
 	system_prompt += "【嚴格角色設定】你的個性是：%s\n" % npc_trait
 	system_prompt += "【嚴格規定】你是劇情 NPC，不是遊戲系統小幫手！絕對不要向玩家列出任何遊戲操作選項（例如：查詢狀態、擲骰子、購買土地等）。\n"
 	system_prompt += "目前的玩家是：[%s]。請根據你的角色設定，直接針對他來到你面前這件事給予回應。\n" % player_name
-	#system_prompt += "對話請保持簡短，限制在 50 字以內。\n"
-	
+
 	if is_final_turn:
-		system_prompt += "\n【強制指令：這是最後一回合】\n"
+		system_prompt += "\n【強制指令：這是最後一回合 (決算階段)】\n"
 		system_prompt += "請根據玩家剛才的態度進行最終裁決，並「嚴格」回傳以下格式的 JSON，不要包含任何額外廢話或 Markdown 標籤：\n"
 		system_prompt += "{\n"
 		system_prompt += "  \"dialog\": \"你的最後一句話（例如：放肆！扣你錢！）\",\n"
@@ -294,7 +293,11 @@ func request_destiny_event(chat_history: Array, player_name: String, persona: Di
 		var processor = get_node_or_null("/root/EventProcessor")
 		if processor:
 			system_prompt += processor.get_schema_prompt()
-	
+	else:
+		system_prompt += "\n【對話規則】\n"
+		system_prompt += "這是一場來回的對話。如果你想繼續與玩家交談，請直接回覆你的台詞。\n"
+		system_prompt += "如果你覺得玩家惹怒了你、或者你已經決定好要給予什麼懲罰/獎勵，想提早結束對話進入裁決階段，請「只回覆」以下關鍵字：\n"
+		system_prompt += "[JUDGE]\n"	
 	# 2. 組裝 Messages 陣列 (包含 System 提示與先前的聊天紀錄)
 	var messages = [{"role": "system", "content": system_prompt}]
 	messages.append_array(chat_history)
